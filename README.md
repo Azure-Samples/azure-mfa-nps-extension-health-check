@@ -1,53 +1,66 @@
 ---
 page_type: sample
 languages:
-- csharp
+- powershell
 products:
-- dotnet
-description: "Add 150 character max description"
-urlFragment: "update-this-to-unique-url-stub"
+- azure-active-directory
+description: "Script to run against Azure MFA NPS Extension servers to perform some basic checks to detect any issues. The output will be in HTML format."
+urlFragment: "azure-mfa-nps-extension-health-check"
 ---
 
-# Official Microsoft Sample
+# Azure MFA NPS extension health check script
 
-<!-- 
-Guidelines on README format: https://review.docs.microsoft.com/help/onboard/admin/samples/concepts/readme-template?branch=master
+Script to run against Azure MFA NPS Extension servers to perform some basic checks to detect any issues. The output will be in HTML format.
 
-Guidance on onboarding samples to docs.microsoft.com/samples: https://review.docs.microsoft.com/help/onboard/admin/samples/process/onboarding?branch=master
+## Script requirements
 
-Taxonomies for products and languages: https://review.docs.microsoft.com/new-hope/information-architecture/metadata/taxonomies?branch=master
--->
+The script needs to be run as a user with local admin privilege on the server, and will ask for global admin on the tenant to be run against.
 
-Give a short description for your sample here. What does it do and why is it important?
+## How to run the script
 
-## Contents
+Download and run the `MFA_NPS_Troubleshooter.ps1` script from this GitHub repo.
 
-Outline the file contents of the repository. It helps users navigate the codebase, build configuration and any related assets.
+## What tests the script performs
 
-| File/folder       | Description                                |
-|-------------------|--------------------------------------------|
-| `src`             | Sample source code.                        |
-| `.gitignore`      | Define what to ignore at commit time.      |
-| `CHANGELOG.md`    | List of changes to the sample.             |
-| `CONTRIBUTING.md` | Guidelines for contributing to the sample. |
-| `README.md`       | This README file.                          |
-| `LICENSE`         | The license for the sample.                |
+The script performs the following test against MFA Extension Server:
 
-## Prerequisites
+1. Check accessibility to https://login.microsoftonline.com
+1. Check accessibility to https://adnotifications.windowsazure.com
+1. Check MFA version.
+1. Check if the NPS Service is *Running*.
+1. Check if the SPN for Azure MFA is *Exist* and *Enabled*.
+1. Check if *Authorization* and *Extension* registry keys have the right values.
+1. Check other Azure MFA related registry keys have the right values.
+1. Check if there is a valid certificated matched with the certificates stored in Azure AD.
+1. Check the time synchronization in the Server.
+1. Compare server time with reliable time server.
+1. Check all missing updates on the server.
 
-Outline the required components and tools that a user might need to have on their machine in order to run the sample. This can be anything from frameworks, SDKs, OS versions or IDE releases.
+## How the results will be displayed
 
-## Setup
+In PowerShell console it will only display the tests name, then it will convert the result to HTML file located at `C:\AzureMFAReport.html`.
 
-Explain how to prepare the sample once the user clones or downloads the repository. The section should outline every step necessary to install dependencies and set up any settings (for example, API keys and output folders).
+Example console output:
 
-## Running the sample
+![Example PowerShell output](media/console_output.jpg)
 
-Outline step-by-step instructions to execute the sample and see its output. Include steps for executing the sample from the IDE, starting specific services in the Azure portal or anything related to the overall launch of the code.
+Example HTML output:
 
-## Key concepts
+![Example HTML output](media/html_output.jpg)
 
-Provide users with more context on the tools and services used in the sample. Explain some of the code that is being used and how services interact with each other.
+## Frequently asked questions
+
+### In case the script detect some issues, will it fix then automatically?
+
+No, but the script will suggest some remediation steps, as shown in the previous example HTML output.
+
+### The script is not checking everything, right?
+
+No, here I need your help! Feel free to share your ideas with me and we can work together to improve it. Open a GitHub issue or pull request in this repo.
+
+### Do you think that the HTML design is cool?
+
+No, help to make it better! Open a GitHub pull request in this repo with your improvements.
 
 ## Contributing
 
