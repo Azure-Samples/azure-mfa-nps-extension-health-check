@@ -45,6 +45,15 @@ $Choice_Number = Read-Host -Prompt "Invalid Option, Based on which test you need
 
 Function Check_Nps_Server_Module {
 
+$IWRADNotificationScriptBlock = {
+	try{
+		Invoke-WebRequest -Uri https://adnotifications.windowsazure.com
+	}
+	catch{
+		#This is the expected response for an unauthenticated request to the endpoint
+		($_.Exception.Message | Out-String).Trim() -eq "The remote server returned an error: (403) Forbidden."
+	}
+}
 $ErrorActionPreference= 'silentlycontinue'
 $loginAccessResult = 'NA'
 $NotificationaccessResult = 'NA'
@@ -66,6 +75,8 @@ $TCPLogin = $False
 $TCPAdnotification = $False
 $DNSLogin= $False
 $DNSADNotification =$False
+$IWRLogin = ""
+$IWRADNotification = ""
 
 
 Connect-MsolService
@@ -110,19 +121,18 @@ Unregister-ScheduledTask -TaskName $GUID -Confirm:$false
 ########################################################################
 $TCPLogin = (RunPSScript -PSScript "Test-NetConnection -ComputerName  login.microsoftonline.com -Port 443").TcpTestSucceeded
 $DNSLogin = (RunPSScript -PSScript "Test-NetConnection -ComputerName  login.microsoftonline.com -Port 443").NameResolutionSucceeded
-
+$IWRLogin = (RunPSScript -PSScript "Invoke-WebRequest -Uri https://login.microsoftonline.com").StatusDescription
 ########################################################################
 $TCPAdnotification = (RunPSScript -PSScript "Test-NetConnection -ComputerName adnotifications.windowsazure.com -Port 443").TcpTestSucceeded
 $DNSADNotification = (RunPSScript -PSScript "Test-NetConnection -ComputerName adnotifications.windowsazure.com -Port 443").NameResolutionSucceeded
-
+$IWRADNotification = (RunPSScript -PSScript $IWRADNotificationScriptBlock)
 
 
 
 
 
 #######################################################################
-
-if ($TCPLogin -and $DNSLogin)
+if (($TCPLogin -and $DNSLogin) -or $IWRLogin)
 {
 
 ### write-Host "Test login.microsoftonline.com accessibility Passed" -ForegroundColor Green 
@@ -151,8 +161,7 @@ write-Host "2- Checking Accessibility to https://adnotifications.windowsazure.co
 Write-Host
 
 
-if ($TCPAdnotification -and $DNSADNotification)
-
+if (($TCPAdnotification -and $DNSADNotification) -or $IWRADNotification)
 {
 
 ### write-Host "Test adnotifications.windowsazure.com accessibility Passed" -ForegroundColor Green
@@ -412,8 +421,8 @@ $NumberofCert = (Get-MsolServicePrincipalCredential -AppPrincipalId "981f26a1-7f
 $NPSCertValue =  (Get-MsolServicePrincipalCredential -AppPrincipalId "981f26a1-7f43-403b-a875-f8b09b8cd720" -ReturnKeyValues 1).Value
 
 # Get local Cert thumbprint from local NPS Server. 
-$localCert =  (Get-ChildItem((Set-Location cert:\localmachine\my))).Thumbprint
-
+$localCert =  (Get-ChildItem((Push-Location cert:\localmachine\my))).Thumbprint
+Pop-Location
 # $Tp will be used to store the Thumbprint for the cloud certs
 $TP = New-Object System.Collections.ArrayList
 
@@ -572,7 +581,7 @@ write-Host "Connection to Azure Failed - Skipped all tests, please make sure to 
 
 }
 
-cd c:\
+Push-Location "C:\"
 
 
 mkdir c:\AzureReport
@@ -625,6 +634,8 @@ tr:nth-child(even) {
 $objects | ConvertTo-Html -Head $Header | Out-File c:\AzureReport\AzureMFAReport.html
 
 Write-host "The Report saved on this Path: C:\AzureReport\AzureMFAReport.html" -ForegroundColor Green
+
+Pop-Location
 
 }
 
