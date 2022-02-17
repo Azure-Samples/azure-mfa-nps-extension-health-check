@@ -1101,7 +1101,7 @@ Write-Host -ForegroundColor Red -BackgroundColor White "Press ENTER to continue,
 Read-Host   
 
 Write-Host -ForegroundColor Green "Restarting NPS" 
-Stop-Service -Name "IAS"
+Stop-Service -Name "IAS" -Force
 Start-Service -Name "IAS"
 Write-Host -ForegroundColor Green "NPS has been restarted.  MFA is not being used at this time."
 Write-Host 
@@ -1118,7 +1118,7 @@ if ($AuthorizationDLLs_Backup -ne $null -and $ExtensionDLLs_Backup -ne $null)
 {
 
 Write-Host -ForegroundColor Green "Registry Keys were restored, restarting NPS."
-Stop-Service -Name "IAS"
+Stop-Service -Name "IAS" -Force
 Start-Service -Name "IAS"
 Write-Host -ForegroundColor Green "NPS has been restarted.  MFA has been reenabled."
 
