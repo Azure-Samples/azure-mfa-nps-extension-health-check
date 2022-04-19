@@ -1,10 +1,11 @@
+﻿  
 Write-Host "*********************************************************************************"
 
 Write-Host "**** Welcome to MFA NPS Extension Troubleshooter Tool ****" -ForegroundColor Green
 
 Write-Host "**** This Tool will help you to troubleshoot MFA NPS Extension Knows issues ****" -ForegroundColor Green
 
-Write-Host "**** Tool Version is 1.0, Make Sure to Visit MS site to get the latest version ****" -ForegroundColor Green
+Write-Host "**** Tool Version is 2.0, Make Sure to Visit MS site to get the latest version ****" -ForegroundColor Green
 
 Write-Host "**** Thank you for Using MS Products, Microsoft @2021 ****" -ForegroundColor Green
 
@@ -199,12 +200,11 @@ $MFAVersion = Get-WmiObject Win32_Product -Filter "Name like 'NPS Extension For 
 
 # Get the latest version of MFA NPS Extension
 
-$web = New-Object Net.WebClient
-$latesMFAVersion = $web.DownloadString("https://www.microsoft.com/en-us/download/details.aspx?id=54688")
+$latestMFAVersion = (((Invoke-WebRequest -Uri 'https://www.microsoft.com/en-us/download/details.aspx?id=54688').ParsedHtml.getElementsByTagName('div') | Where-Object { $_.classname -eq 'fileinfo' }).textContent).Split(':')[1] -replace "[^0-9.]",''
 
 # Compare if the current version match the latest version
 
-if ($latesMFAVersion -match $MFAVersion)
+if ($latestMFAVersion -le $MFAVersion)
 {
 
 # Display the Current MFA NPS version and mention it's latest one
@@ -213,7 +213,7 @@ $MFATestVersion = "True"
 
 
 
-$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if the current installed MFA NPS Extension Version is the latest';'Result'='Test Passed';'Recomendations' ="N/A";'Notes' = "The current installed version is the latest which is: " + $MFAVersion}
+$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if the current installed MFA NPS Extension Version is the latest';'Result'='Test Passed';'Recomendations' ="N/A";'Notes' = "The current installed version is: " + $MFAVersion + ". The latest version is: " + $latestMFAVersion "."}
 
 
 
@@ -280,7 +280,9 @@ write-host
 
 $AllSPNs = ''
 
-$AllSPNs = Get-MsolServicePrincipal | select AppPrincipalId 
+
+$AllSPNs = Get-MsolServicePrincipal -All | select AppPrincipalId 
+
 
 #if the MFA NPS is exist in $AllSPNs then it will check it's status if it's enabled or not, if it's not exist the test will faile directly
 
@@ -599,41 +601,28 @@ if ($objects -ne $null)
 
 {
 $Header = @"
-
 <head>
 <title>Azure MFA NPS Extension HealchCheck Report</title>
 </head>
-
 <body>
-
-
 <p align ="Center"><font size="12" color="blue">Azure MFA NPS Extension Health Check Results</font></p>
-
 </body>
-
 <style>
-
 table {
     font-family: arial, sans-serif;
     border-collapse: collapse;
     width: 100%;
     
 }
-
 td, th {
     border: 1px solid #dddddd;
     text-align: left;
     padding: 8px;
-
 }
-
 tr:nth-child(even) {
     background-color: #dddddd;
-
 }
-
 </style>
-
 "@
 
 #$objects | ConvertTo-HTML -As Table -Fragment | Out-File c:\test1.html
@@ -1038,7 +1027,8 @@ Set-Itemproperty -path 'HKLM:\SOFTWARE\Microsoft\AzureMfa' -Name 'VERBOSE_LOG' -
 mkdir c:\NPS
 cd C:\NPS
 Remove-Item "c:\nps\*.txt", "c:\nps\*.evtx", "c:\nps\*.etl","c:\nps\*.log", "c:\nps\*.cab"
-netsh trace start capture=yes tracefile=C:\NPS\nettrace.etl
+
+netsh trace start capture=yes overwrite=yes  tracefile=C:\NPS\nettrace.etl
 REG QUERY "HKLM\SOFTWARE\Microsoft\AzureMfa" > C:\NPS\BeforeRegAdd_AzureMFA.txt
 REG QUERY "HKLM\SYSTEM\CurrentControlSet\Services\AuthSrv\Parameters" > C:\NPS\BeforeRegAdd_AuthSrv.txt
 REG ADD HKLM\SOFTWARE\Microsoft\AzureMfa /v VERBOSE_LOG /d TRUE /f
@@ -1113,7 +1103,7 @@ Write-Host -ForegroundColor Red -BackgroundColor White "Press ENTER to continue,
 Read-Host   
 
 Write-Host -ForegroundColor Green "Restarting NPS" 
-Stop-Service -Name "IAS"
+Stop-Service -Name "IAS" -Force
 Start-Service -Name "IAS"
 Write-Host -ForegroundColor Green "NPS has been restarted.  MFA is not being used at this time."
 Write-Host 
@@ -1130,7 +1120,8 @@ if ($AuthorizationDLLs_Backup -ne $null -and $ExtensionDLLs_Backup -ne $null)
 {
 
 Write-Host -ForegroundColor Green "Registry Keys were restored, restarting NPS."
-Stop-Service -Name "IAS"
+
+Stop-Service -Name "IAS" -Force
 Start-Service -Name "IAS"
 Write-Host -ForegroundColor Green "NPS has been restarted.  MFA has been reenabled."
 
@@ -1157,3 +1148,4 @@ if ($Choice_Number -eq '1') { MFAorNPS }
 if ($Choice_Number -eq '2') { Check_Nps_Server_Module }
 if ($Choice_Number -eq '3') { User_Test_Module }
 if ($Choice_Number -eq '4') { collect_logs }
+
