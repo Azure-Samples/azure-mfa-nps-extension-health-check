@@ -44,7 +44,7 @@ $Choice_Number = Read-Host -Prompt "Invalid Option, Based on which test you need
 
 
 ##### This Function will be run against against MFA NPS Server ######
-##### Microsoft 2018 @Ahmad Yasin ##########
+##### Microsoft 2021 @Ahmad Yasin, Nate Harris (nathar), Will Aftring (wiaftin) ##########
 
 Function Check_Nps_Server_Module {
 $IWRADNotificationScriptBlock = {
@@ -1027,6 +1027,7 @@ Set-Itemproperty -path 'HKLM:\SOFTWARE\Microsoft\AzureMfa' -Name 'VERBOSE_LOG' -
 mkdir c:\NPS
 cd C:\NPS
 Remove-Item "c:\nps\*.txt", "c:\nps\*.evtx", "c:\nps\*.etl","c:\nps\*.log", "c:\nps\*.cab"
+
 netsh trace start capture=yes overwrite=yes  tracefile=C:\NPS\nettrace.etl
 REG QUERY "HKLM\SOFTWARE\Microsoft\AzureMfa" > C:\NPS\BeforeRegAdd_AzureMFA.txt
 REG QUERY "HKLM\SYSTEM\CurrentControlSet\Services\AuthSrv\Parameters" > C:\NPS\BeforeRegAdd_AuthSrv.txt
@@ -1119,6 +1120,7 @@ if ($AuthorizationDLLs_Backup -ne $null -and $ExtensionDLLs_Backup -ne $null)
 {
 
 Write-Host -ForegroundColor Green "Registry Keys were restored, restarting NPS."
+
 Stop-Service -Name "IAS" -Force
 Start-Service -Name "IAS"
 Write-Host -ForegroundColor Green "NPS has been restarted.  MFA has been reenabled."
