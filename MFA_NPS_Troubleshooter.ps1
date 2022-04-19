@@ -280,7 +280,8 @@ write-host
 
 $AllSPNs = ''
 
-$AllSPNs = Get-MsolServicePrincipal -MaxResults 10000 | select AppPrincipalId 
+
+$AllSPNs = Get-MsolServicePrincipal -All | select AppPrincipalId 
 
 #if the MFA NPS is exist in $AllSPNs then it will check it's status if it's enabled or not, if it's not exist the test will faile directly
 
