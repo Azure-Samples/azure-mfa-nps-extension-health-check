@@ -283,6 +283,7 @@ $AllSPNs = ''
 
 $AllSPNs = Get-MsolServicePrincipal -All | select AppPrincipalId 
 
+
 #if the MFA NPS is exist in $AllSPNs then it will check it's status if it's enabled or not, if it's not exist the test will faile directly
 
 if ($AllSPNs -match "981f26a1-7f43-403b-a875-f8b09b8cd720")
@@ -1145,3 +1146,4 @@ if ($Choice_Number -eq '1') { MFAorNPS }
 if ($Choice_Number -eq '2') { Check_Nps_Server_Module }
 if ($Choice_Number -eq '3') { User_Test_Module }
 if ($Choice_Number -eq '4') { collect_logs }
+
