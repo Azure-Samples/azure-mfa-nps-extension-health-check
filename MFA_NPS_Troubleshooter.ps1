@@ -1,12 +1,13 @@
+﻿  
 Write-Host "*********************************************************************************"
 
 Write-Host "**** Welcome to MFA NPS Extension Troubleshooter Tool ****" -ForegroundColor Green
 
 Write-Host "**** This Tool will help you to troubleshoot MFA NPS Extension Knows issues ****" -ForegroundColor Green
 
-Write-Host "**** Tool Version is 1.0, Make Sure to Visit MS site to get the latest version ****" -ForegroundColor Green
+Write-Host "**** Tool Version is 2.0, Make Sure to Visit MS site to get the latest version ****" -ForegroundColor Green
 
-Write-Host "**** Thank you for Using MS Products, Microsoft @2019 ****" -ForegroundColor Green
+Write-Host "**** Thank you for Using MS Products, Microsoft @2021 ****" -ForegroundColor Green
 
 Write-Host "*******************************************************************************"
 
@@ -18,22 +19,24 @@ Write-Host
 
 Write-Host " Please Choose one of the tests below: " -ForegroundColor Yellow
 Write-Host
-Write-Host " (0) Isolate the Cause of the issue: if it's NPS or MFA issue (Recomended)... " -ForegroundColor Green
+Write-Host " (1) Isolate the Cause of the issue: if it's NPS or MFA issue (Export MFA RegKeys, Restart NPS, Test, Import Regkeys, Restart NPS)... " -ForegroundColor Green
 Write-Host
-Write-Host " (1) All users not able to use MFA NPS Extension ... " -ForegroundColor Green
+Write-Host " (2) All users not able to use MFA NPS Extension (Testing Access to Azure/Create HTML Report) ... " -ForegroundColor Green
 Write-Host
-Write-Host " (2) Specific User not able to use MFA NPS Extension ... " -ForegroundColor Green
+Write-Host " (3) Specific User not able to use MFA NPS Extension (Test MFA for specific UPN) ... " -ForegroundColor Green
 Write-Host
-Write-Host " (3) Collect Logs to contact MS support ... " -ForegroundColor Green
+Write-Host " (4) Collect Logs to contact MS support (Enable Logging/Restart NPS/Gather Logs)... " -ForegroundColor Green
 Write-Host
-
+Write-Host " (E) EXIT SCRIPT " -ForegroundColor Red
+Write-Host
+$Timestamp = "$((Get-Date).ToString("yyyyMMdd_HHmmss"))"
 $Choice_Number =''
-$Choice_Number = Read-Host -Prompt "Based on which test you need to run, please type 0,1,2 or 3, E to exit the test, then click enter " 
+$Choice_Number = Read-Host -Prompt "Based on which test you need to run, please type 1, 2, 3, 4 or E to exit the test, then click enter " 
 
-while ( !($Choice_Number -eq '0' -or $Choice_Number -eq '1' -or $Choice_Number -eq '2' -or $Choice_Number -eq '3' -or$Choice_Number -eq 'E'))
+while ( !($Choice_Number -eq '1' -or $Choice_Number -eq '2' -or $Choice_Number -eq '3' -or $Choice_Number -eq '4' -or$Choice_Number -eq 'E'))
 {
 
-$Choice_Number = Read-Host -Prompt "Invalid Option, Based on which test you need to run, please type 1 or 2, E to exit the test, then click enter " 
+$Choice_Number = Read-Host -Prompt "Invalid Option, Based on which test you need to run, please type 1, 2, 3, 4 or E to exit the test, then click enter " 
 
 }
 
@@ -44,7 +47,15 @@ $Choice_Number = Read-Host -Prompt "Invalid Option, Based on which test you need
 ##### Microsoft 2018 @Ahmad Yasin ##########
 
 Function Check_Nps_Server_Module {
-
+$IWRADNotificationScriptBlock = {
+	try{
+		Invoke-WebRequest -Uri https://adnotifications.windowsazure.com
+	}
+	catch{
+		#This is the expected response for an unauthenticated request to the endpoint
+		($_.Exception.Message | Out-String).Trim() -eq "The remote server returned an error: (403) Forbidden."
+	}
+}
 $ErrorActionPreference= 'silentlycontinue'
 $loginAccessResult = 'NA'
 $NotificationaccessResult = 'NA'
@@ -66,7 +77,8 @@ $TCPLogin = $False
 $TCPAdnotification = $False
 $DNSLogin= $False
 $DNSADNotification =$False
-
+$IWRLogin = ""
+$IWRADNotification = ""
 
 Connect-MsolService
 
@@ -111,18 +123,18 @@ Unregister-ScheduledTask -TaskName $GUID -Confirm:$false
 $TCPLogin = (RunPSScript -PSScript "Test-NetConnection -ComputerName  login.microsoftonline.com -Port 443").TcpTestSucceeded
 $DNSLogin = (RunPSScript -PSScript "Test-NetConnection -ComputerName  login.microsoftonline.com -Port 443").NameResolutionSucceeded
 
+$IWRLogin = (RunPSScript -PSScript "Invoke-WebRequest -Uri https://login.microsoftonline.com").StatusDescription
+
 ########################################################################
 $TCPAdnotification = (RunPSScript -PSScript "Test-NetConnection -ComputerName adnotifications.windowsazure.com -Port 443").TcpTestSucceeded
 $DNSADNotification = (RunPSScript -PSScript "Test-NetConnection -ComputerName adnotifications.windowsazure.com -Port 443").NameResolutionSucceeded
 
-
-
-
-
+$IWRADNotification = (RunPSScript -PSScript $IWRADNotificationScriptBlock)
 
 #######################################################################
 
-if ($TCPLogin -and $DNSLogin)
+#if ($TCPLogin -and $DNSLogin)
+if (($TCPLogin -and $DNSLogin) -or $IWRLogin)
 {
 
 ### write-Host "Test login.microsoftonline.com accessibility Passed" -ForegroundColor Green 
@@ -151,7 +163,8 @@ write-Host "2- Checking Accessibility to https://adnotifications.windowsazure.co
 Write-Host
 
 
-if ($TCPAdnotification -and $DNSADNotification)
+#if ($TCPAdnotification -and $DNSADNotification)
+if (($TCPAdnotification -and $DNSADNotification) -or $IWRADNotification)
 
 {
 
@@ -187,12 +200,11 @@ $MFAVersion = Get-WmiObject Win32_Product -Filter "Name like 'NPS Extension For 
 
 # Get the latest version of MFA NPS Extension
 
-$web = New-Object Net.WebClient
-$latesMFAVersion = $web.DownloadString("https://www.microsoft.com/en-us/download/details.aspx?id=54688")
+$latestMFAVersion = (((Invoke-WebRequest -Uri 'https://www.microsoft.com/en-us/download/details.aspx?id=54688').ParsedHtml.getElementsByTagName('div') | Where-Object { $_.classname -eq 'fileinfo' }).textContent).Split(':')[1] -replace "[^0-9.]",''
 
 # Compare if the current version match the latest version
 
-if ($latesMFAVersion -match $MFAVersion)
+if ($latestMFAVersion -le $MFAVersion)
 {
 
 # Display the Current MFA NPS version and mention it's latest one
@@ -201,7 +213,7 @@ $MFATestVersion = "True"
 
 
 
-$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if the current installed MFA NPS Extension Version is the latest';'Result'='Test Passed';'Recomendations' ="N/A";'Notes' = "The current installed version is the latest which is: " + $MFAVersion}
+$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if the current installed MFA NPS Extension Version is the latest';'Result'='Test Passed';'Recomendations' ="N/A";'Notes' = "The current installed version is: " + $MFAVersion + ". The latest version is: " + $latestMFAVersion "."}
 
 
 
@@ -267,6 +279,7 @@ write-host
 #Get All Registered SPNs in the tenant, save it in $AllSPNs variable
 
 $AllSPNs = ''
+
 
 $AllSPNs = Get-MsolServicePrincipal -All | select AppPrincipalId 
 
@@ -412,7 +425,10 @@ $NumberofCert = (Get-MsolServicePrincipalCredential -AppPrincipalId "981f26a1-7f
 $NPSCertValue =  (Get-MsolServicePrincipalCredential -AppPrincipalId "981f26a1-7f43-403b-a875-f8b09b8cd720" -ReturnKeyValues 1).Value
 
 # Get local Cert thumbprint from local NPS Server. 
-$localCert =  (Get-ChildItem((Set-Location cert:\localmachine\my))).Thumbprint
+#$localCert =  (Get-ChildItem((Set-Location cert:\localmachine\my))).Thumbprint
+$localCert = (Get-ChildItem((Push-Location cert:\localmachine\my))).Thumbprint
+Pop-Location
+
 
 # $Tp will be used to store the Thumbprint for the cloud certs
 $TP = New-Object System.Collections.ArrayList
@@ -572,7 +588,8 @@ write-Host "Connection to Azure Failed - Skipped all tests, please make sure to 
 
 }
 
-cd c:\
+#cd c:\
+Push-Location "C:\"
 
 
 mkdir c:\AzureReport
@@ -583,41 +600,28 @@ if ($objects -ne $null)
 
 {
 $Header = @"
-
 <head>
 <title>Azure MFA NPS Extension HealchCheck Report</title>
 </head>
-
 <body>
-
-
 <p align ="Center"><font size="12" color="blue">Azure MFA NPS Extension Health Check Results</font></p>
-
 </body>
-
 <style>
-
 table {
     font-family: arial, sans-serif;
     border-collapse: collapse;
     width: 100%;
     
 }
-
 td, th {
     border: 1px solid #dddddd;
     text-align: left;
     padding: 8px;
-
 }
-
 tr:nth-child(even) {
     background-color: #dddddd;
-
 }
-
 </style>
-
 "@
 
 #$objects | ConvertTo-HTML -As Table -Fragment | Out-File c:\test1.html
@@ -625,6 +629,7 @@ tr:nth-child(even) {
 $objects | ConvertTo-Html -Head $Header | Out-File c:\AzureReport\AzureMFAReport.html
 
 Write-host "The Report saved on this Path: C:\AzureReport\AzureMFAReport.html" -ForegroundColor Green
+Pop-Location
 
 }
 
@@ -1020,44 +1025,55 @@ Set-Itemproperty -path 'HKLM:\SOFTWARE\Microsoft\AzureMfa' -Name 'VERBOSE_LOG' -
 
 mkdir c:\NPS
 cd C:\NPS
-netsh trace start Scenario=NetConnection capture=yes tracefile=C:\NPS\nettrace.etl
-REG QUERY "HKLM\SOFTWARE\Microsoft\AzureMfa" > C:\NPS\%computername%_BeforeRegAdd_AzureMFA.txt
-REG QUERY "HKLM\SYSTEM\CurrentControlSet\Services\AuthSrv\Parameters" > C:\NPS\%computername%BeforeRegAdd_AuthSrv.txt
+Remove-Item "c:\nps\*.txt", "c:\nps\*.evtx", "c:\nps\*.etl","c:\nps\*.log", "c:\nps\*.cab"
+netsh trace start capture=yes overwrite=yes  tracefile=C:\NPS\nettrace.etl
+REG QUERY "HKLM\SOFTWARE\Microsoft\AzureMfa" > C:\NPS\BeforeRegAdd_AzureMFA.txt
+REG QUERY "HKLM\SYSTEM\CurrentControlSet\Services\AuthSrv\Parameters" > C:\NPS\BeforeRegAdd_AuthSrv.txt
 REG ADD HKLM\SOFTWARE\Microsoft\AzureMfa /v VERBOSE_LOG /d TRUE /f
 net stop ias
 net start ias
+
 $npsext = "NPSExtension"
 $logmancmd= "logman create trace '$npsext' -ow -o C:\NPS\NPSExtension.etl -p {7237ED00-E119-430B-AB0F-C63360C8EE81} 0xffffffffffffffff 0xff -nb 16 16 -bs 1024 -mode Circular -f bincirc -max 4096 -ets"
 $logmancmdupdate = "logman update trace '$nps' -p {EC2E6D3A-C958-4C76-8EA4-0262520886FF} 0xffffffffffffffff 0xff -ets"
 cmd /c $logmancmd
+
+Write-Host ""
+Write-Host -ForegroundColor Yellow "If you see 'Error: Data Collector Set was not found.' after this, that is " -NoNewline
+Write-Host -ForegroundColor Green "GOOD," -NoNewline
+Write-Host -ForegroundColor Yellow " if not then it means the files already existed in C:\NPS."
+
 cmd /c $logmancmdupdate
 
-
-Read-Host "Please Reproduce the issue quickly, once you finish please Press any key .... "
-
+write-host 
+Write-Host -ForegroundColor Yellow "Please Reproduce the issue quickly, once you finish please Press the Enter key to finish and gather logs."
+Read-Host
 
 # Stop and Collect the logs
 $logmanstop = "logman stop '$npsext' -ets"
 cmd /c $logmanstop
 netsh trace stop
-REG QUERY "HKLM\SOFTWARE\Microsoft\AzureMfa" > C:\NPS\%computername%_AfterRegAdd_AzureMFA.txt
-REG QUERY "HKLM\SYSTEM\CurrentControlSet\Services\AuthSrv\Parameters" > C:\NPS\%computername%AfterRegAdd_AuthSrv.txt
+REG QUERY "HKLM\SOFTWARE\Microsoft\AzureMfa" > C:\NPS\AfterRegAdd_AzureMFA.txt
+REG QUERY "HKLM\SYSTEM\CurrentControlSet\Services\AuthSrv\Parameters" > C:\NPS\AfterRegAdd_AuthSrv.txt
 REG ADD HKLM\SOFTWARE\Microsoft\AzureMfa /v VERBOSE_LOG /d FALSE /f
 Set-Itemproperty -path 'HKLM:\SOFTWARE\Microsoft\AzureMfa' -Name 'VERBOSE_LOG' -value 'False'
-wevtutil epl AuthNOptCh C:\NPS\%computername%_AuthNOptCh.evtx
+wevtutil epl AuthNOptCh C:\NPS\%computername%_AuthNOptCh.evtx /ow:True
 wevtutil epl AuthZOptCh C:\NPS\%computername%_AuthZOptCh.evtx
 wevtutil epl AuthZAdminCh C:\NPS\%computername%_AuthZAdminCh.evtx
-Start .
+wevtutil qe Security "/q:*[System [(EventID=6272) or (EventID=6273) or (EventID=6274)]]" /f:text |out-file c:\nps\NPS_EventLog.log
 
-
-
-
-
+$Compress =@{
+Path = "c:\nps\*.txt", "c:\nps\*.evtx", "c:\nps\*.etl","c:\nps\*.log", "c:\nps\*.cab"
+CompressionLevel="Fastest"
+DestinationPath = "c:\nps\"+$Timestamp+"_NpsLogging.zip"
+}
+Write-Host -ForegroundColor Yellow "Compressing log files."
+Compress-Archive @Compress
 
 Write-Host
-Write-Host "Data collection finished, Please compress the folder under C:\NPS and upload it to MS support request ... " -ForegroundColor Green
+Write-Host -ForegroundColor Yellow "Data collection has completed.  Please upload the most recent Zip file to MS support. "
 Write-Host
-
+ii c:\nps
 Break
 
 }
@@ -1065,7 +1081,7 @@ Break
 Function MFAorNPS
 {
 
-# This test will remove the MFA registry key,to be able to decide if the issue related to MFA or NPS.
+# This test will remove the MFA registry key and restart NPS, so that you can determine if the issue related to MFA or NPS.
 
 $AuthorizationDLLs_Backup = ''
 $ExtensionDLLs_Backup = ''
@@ -1073,29 +1089,27 @@ $ExtensionDLLs_Backup = ''
 $AuthorizationDLLs_Backup = (Get-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\AuthSrv\Parameters -Name AuthorizationDLLs).AuthorizationDLLs
 $ExtensionDLLs_Backup = (Get-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\AuthSrv\Parameters -Name ExtensionDLLs).ExtensionDLLs
 
+Write-Host -ForegroundColor Yellow "Exporting the NPS MFA registry keys."
+reg export hklm\system\currentcontrolset\services\authsrv c:\nps\AuthSrv.reg /y 
+
 Set-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\AuthSrv\Parameters -Name AuthorizationDLLs -Value ''
 Set-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\AuthSrv\Parameters -Name ExtensionDLLs -Value ''
 
-
 Write-Host 
-
-Write-Host -ForegroundColor DarkYellow "In this test we will remove some registry keys that will bypass the MFA module to isolate if the issue related directly to MFA or the NPS role, after the test finish the script will restore these regitry keys automatically, Press Any key to continue, otherwise please close the powershell box ..." 
-
+Write-Host -ForegroundColor Yellow "In this test we will remove some registry keys that will bypass the MFA module to determine if the issue is related to the MFA extension or the NPS role.  After the test finishes the regkeys will be restored."
+Write-Host -ForegroundColor Red -BackgroundColor White "Press ENTER to continue, otherwise please close the PowerShell window or hit CTRL+C to exit script." 
 Read-Host   
 
+Write-Host -ForegroundColor Green "Restarting NPS" 
+Stop-Service -Name "IAS" -Force
+Start-Service -Name "IAS"
+Write-Host -ForegroundColor Green "NPS has been restarted.  MFA is not being used at this time."
 Write-Host 
-
-Write-Host -ForegroundColor Yellow "Try to repro the issue again now without pressing anything here, if the user now able to connect without MFA successfully, then the issue related more to the MFA module, try to run the other test in this script, if the user still failing to connect then the issue with the NPS, hence please engage Network team, once you finish this test press any key to restore the MFA module .... " 
-
+Write-Host -ForegroundColor Yellow "Try to repro the issue now.  If the user is now able to connect successfully without MFA then the issue is related more to the MFA module.  After you finish this test press Enter to restore the MFA functionality." 
 Read-Host
 
-Write-Host
-
 Set-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\AuthSrv\Parameters -Name AuthorizationDLLs -Value $AuthorizationDLLs_Backup
-
 Set-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\AuthSrv\Parameters -Name ExtensionDLLs -Value $ExtensionDLLs_Backup
-
-Write-Host 
 
 $AuthorizationDLLs_Backup = (Get-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\AuthSrv\Parameters -Name AuthorizationDLLs).AuthorizationDLLs
 $ExtensionDLLs_Backup = (Get-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\AuthSrv\Parameters -Name ExtensionDLLs).ExtensionDLLs
@@ -1103,7 +1117,10 @@ $ExtensionDLLs_Backup = (Get-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE\SYS
 if ($AuthorizationDLLs_Backup -ne $null -and $ExtensionDLLs_Backup -ne $null)
 {
 
-Write-Host "Registry Keys were restored, Proceed with other tests in this script if required" -ForegroundColor Green
+Write-Host -ForegroundColor Green "Registry Keys were restored, restarting NPS."
+Stop-Service -Name "IAS" -Force
+Start-Service -Name "IAS"
+Write-Host -ForegroundColor Green "NPS has been restarted.  MFA has been reenabled."
 
 }
 
@@ -1111,7 +1128,10 @@ Else
 
 {
 
-Write-Host "OPs ... Something wnet wrong while restoring the Registries, please follow this article: " -ForegroundColor Red
+Write-Host "Something went wrong while restoring the Registries, please import them manually from C:\NPS\AuthSrv.reg and restart the NPS Service. Hit Enter now to open Services and C:\NPS " -ForegroundColor Red
+Read-Host
+services.msc
+ii c:\nps
 
 }
 
@@ -1121,7 +1141,7 @@ Break
 
 
 if ($Choice_Number -eq 'E') { Break}
-if ($Choice_Number -eq '0') { MFAorNPS }
-if ($Choice_Number -eq '1') { Check_Nps_Server_Module }
-if ($Choice_Number -eq '2') { User_Test_Module }
-if ($Choice_Number -eq '3') { collect_logs }
+if ($Choice_Number -eq '1') { MFAorNPS }
+if ($Choice_Number -eq '2') { Check_Nps_Server_Module }
+if ($Choice_Number -eq '3') { User_Test_Module }
+if ($Choice_Number -eq '4') { collect_logs }
