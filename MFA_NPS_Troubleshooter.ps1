@@ -200,12 +200,11 @@ $MFAVersion = Get-WmiObject Win32_Product -Filter "Name like 'NPS Extension For 
 
 # Get the latest version of MFA NPS Extension
 
-$web = New-Object Net.WebClient
-$latesMFAVersion = $web.DownloadString("https://www.microsoft.com/en-us/download/details.aspx?id=54688")
+$latestMFAVersion = (((Invoke-WebRequest -Uri 'https://www.microsoft.com/en-us/download/details.aspx?id=54688').ParsedHtml.getElementsByTagName('div') | Where-Object { $_.classname -eq 'fileinfo' }).textContent).Split(':')[1] -replace "[^0-9.]",''
 
 # Compare if the current version match the latest version
 
-if ($latesMFAVersion -match $MFAVersion)
+if ($latestMFAVersion -le $MFAVersion)
 {
 
 # Display the Current MFA NPS version and mention it's latest one
@@ -214,7 +213,7 @@ $MFATestVersion = "True"
 
 
 
-$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if the current installed MFA NPS Extension Version is the latest';'Result'='Test Passed';'Recomendations' ="N/A";'Notes' = "The current installed version is the latest which is: " + $MFAVersion}
+$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if the current installed MFA NPS Extension Version is the latest';'Result'='Test Passed';'Recomendations' ="N/A";'Notes' = "The current installed version is: " + $MFAVersion + ". The latest version is: " + $latestMFAVersion "."}
 
 
 
