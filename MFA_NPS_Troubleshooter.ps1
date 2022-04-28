@@ -213,7 +213,7 @@ $MFATestVersion = "True"
 
 
 
-$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if the current installed MFA NPS Extension Version is the latest';'Result'='Test Passed';'Recomendations' ="N/A";'Notes' = "The current installed version is: " + $MFAVersion + ". The latest version is: " + $latestMFAVersion "."}
+$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if the current installed MFA NPS Extension Version is the latest';'Result'='Test Passed';'Recomendations' ="N/A";'Notes' = "The current installed version is: $MFAVersion. The latest version is: $latestMFAVersion."}
 
 
 
