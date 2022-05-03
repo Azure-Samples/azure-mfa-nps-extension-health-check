@@ -7,7 +7,7 @@ Write-Host "**** This Tool will help you to troubleshoot MFA NPS Extension Knows
 
 Write-Host "**** Tool Version is 2.0, Make Sure to Visit MS site to get the latest version ****" -ForegroundColor Green
 
-Write-Host "**** Thank you for Using MS Products, Microsoft @2021 ****" -ForegroundColor Green
+Write-Host "**** Thank you for Using MS Products, Microsoft @2022 ****" -ForegroundColor Green
 
 Write-Host "*******************************************************************************"
 
@@ -44,7 +44,7 @@ $Choice_Number = Read-Host -Prompt "Invalid Option, Based on which test you need
 
 
 ##### This Function will be run against against MFA NPS Server ######
-##### Microsoft 2021 @Ahmad Yasin, Nate Harris (nathar), Will Aftring (wiaftin) ##########
+##### Microsoft 2022 @Ahmad Yasin, Nate Harris (nathar), Will Aftring (wiaftin) ##########
 
 Function Check_Nps_Server_Module {
 $IWRADNotificationScriptBlock = {
@@ -213,8 +213,7 @@ $MFATestVersion = "True"
 
 
 
-$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if the current installed MFA NPS Extension Version is the latest';'Result'='Test Passed';'Recomendations' ="N/A";'Notes' = "The current installed version is: " + $MFAVersion + ". The latest version is: " + $latestMFAVersion "."}
-
+$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if the current installed MFA NPS Extension Version is the latest';'Result'='Test Passed';'Recomendations' ="N/A";'Notes' = "The current installed version is the latest which is: " + $MFAVersion}
 
 
 ### write-Host "Current MFA NPS Version is:"  $MFAVersion "; it's the latest one !" -ForegroundColor Green
