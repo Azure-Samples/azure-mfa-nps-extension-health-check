@@ -140,7 +140,7 @@ if (($TCPLogin -and $DNSLogin) -or $IWRLogin)
 ### write-Host "Test login.microsoftonline.com accessibility Passed" -ForegroundColor Green 
 
 
-$objects += New-Object -Type PSObject -Prop @{'Test Name'='Access To https://login.MicrosoftOnline.Com';'Result'='Test Passed';'Recomendations' ="N/A";'Notes' = "N/A"}
+$objects += New-Object -Type PSObject -Prop @{'Test Name'='Access To https://login.MicrosoftOnline.Com';'Result'='Test Passed';'recommendations' ="N/A";'Notes' = "N/A"}
 
 
 $loginAccessResult = "True"
@@ -153,7 +153,7 @@ Else
 ### write-Host "Test login.microsoftonline.com accessibility Failed" -ForegroundColor Red
 
 $loginAccessResult = "False"
-$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking accessiblity to https://login.MicrosoftOnline.Com';'Result'='Test Failed';'Recomendations' ="Follow MS article for remediation: https://docs.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#network-requirements";'Notes' = "This will cause MFA Methods to fail"}
+$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking accessiblity to https://login.MicrosoftOnline.Com';'Result'='Test Failed';'recommendations' ="Follow MS article for remediation: https://docs.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#network-requirements";'Notes' = "This will cause MFA Methods to fail"}
 
 
 }
@@ -173,7 +173,7 @@ if (($TCPAdnotification -and $DNSADNotification) -or $IWRADNotification)
 $NotificationaccessResult = "True"
 
 
-$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking accessiblity to https://adnotifications.windowsazure.com';'Result'='Test Passed';'Recomendations' ="N/A";'Notes' = "N/A"}
+$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking accessiblity to https://adnotifications.windowsazure.com';'Result'='Test Passed';'recommendations' ="N/A";'Notes' = "N/A"}
 
 
 
@@ -187,7 +187,7 @@ Else
 $NotificationaccessResult = "False"
 
 
-$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking accessiblity to adnotifications.windowsazure.com accessibility';'Result'='Test Failed';'Recomendations' ="Follow MS article for remediation:https://docs.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#network-requirements";'Notes' = "This will cause MFA Methods to fail"}
+$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking accessiblity to adnotifications.windowsazure.com accessibility';'Result'='Test Failed';'recommendations' ="Follow MS article for remediation:https://docs.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#network-requirements";'Notes' = "This will cause MFA Methods to fail"}
 
 
 }
@@ -213,7 +213,7 @@ $MFATestVersion = "True"
 
 
 
-$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if the current installed MFA NPS Extension Version is the latest';'Result'='Test Passed';'Recomendations' ="N/A";'Notes' = "The current installed version is the latest which is: " + $MFAVersion}
+$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if the current installed MFA NPS Extension Version is the latest';'Result'='Test Passed';'recommendations' ="N/A";'Notes' = "The current installed version is the latest which is: " + $MFAVersion}
 
 
 ### write-Host "Current MFA NPS Version is:"  $MFAVersion "; it's the latest one !" -ForegroundColor Green
@@ -226,11 +226,11 @@ Else
 
 # Display the Current MFA NPS version and mention it's Not the latest one, Advise to upgrade
 
-### write-Host "Current MFA NPS Version is:"  $MFAVersion "; but it's NOT the latest one, we recomend to upgrade it" -ForegroundColor Yellow
+### write-Host "Current MFA NPS Version is:"  $MFAVersion "; but it's NOT the latest one, we recommend to upgrade it" -ForegroundColor Yellow
 
 $MFATestVersion = "False"
 
-$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if the current installed MFA NPS Extension Version is the latest';'Result'='Test Failed';'Recomendations' ="Make sure to Upgrade to the latest version";'Notes' = "Current installed MFA Version is: " +$MFAVersion}
+$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if the current installed MFA NPS Extension Version is the latest';'Result'='Test Failed';'recommendations' ="Make sure to Upgrade to the latest version";'Notes' = "Current installed MFA Version is: " +$MFAVersion}
 
 
 }
@@ -251,7 +251,7 @@ $NPSServiceStatus= "True"
 ### write-Host "Passed" -ForegroundColor Green
 
 
-$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if NPS Service is Running';'Result'='Test Passed';'Recomendations' ="N/A";'Notes' = "N/A"}
+$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if NPS Service is Running';'Result'='Test Passed';'recommendations' ="N/A";'Notes' = "N/A"}
 
 
 }
@@ -263,7 +263,7 @@ Else
 
 $NPSServiceStatus= "False"
 
-$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if NPS Service is Running';'Result'='Test Failed';'Recomendations' ="MS Article may help: https://blogs.technet.microsoft.com/sbs/2009/02/20/the-network-policy-server-service-ias-fails-to-start-or-be-installed/";'Notes' = "N/A"}
+$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if NPS Service is Running';'Result'='Test Failed';'recommendations' ="MS Article may help: https://blogs.technet.microsoft.com/sbs/2009/02/20/the-network-policy-server-service-ias-fails-to-start-or-be-installed/";'Notes' = "N/A"}
 
 }
 
@@ -283,7 +283,7 @@ $AllSPNs = ''
 $AllSPNs = Get-MsolServicePrincipal -All | select AppPrincipalId 
 
 
-#if the MFA NPS is exist in $AllSPNs then it will check it's status if it's enabled or not, if it's not exist the test will faile directly
+#if the MFA NPS is exist in $AllSPNs then it will check it's status if it's enabled or not, if it's not exist the test will fail directly
 
 if ($AllSPNs -match "981f26a1-7f43-403b-a875-f8b09b8cd720")
 
@@ -291,7 +291,7 @@ if ($AllSPNs -match "981f26a1-7f43-403b-a875-f8b09b8cd720")
             $SPNExist = "True"
 
             
-            $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if Azure MFA SPN is Exist in the tenant';'Result'='Test Passed';'Recomendations' ="N/A";'Notes' = "N/A"}
+            $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if Azure MFA SPN is Exist in the tenant';'Result'='Test Passed';'recommendations' ="N/A";'Notes' = "N/A"}
 
 
             # Test if the SPN is enabled or Disabled
@@ -301,7 +301,7 @@ if ($AllSPNs -match "981f26a1-7f43-403b-a875-f8b09b8cd720")
 
             $SPNEnabled = "True"
             
-            $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if Azure MFA SPN is Enabled in the tenant';'Result'='Test Passed';'Recomendations' ="N/A";'Notes' = "N/A"}
+            $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if Azure MFA SPN is Enabled in the tenant';'Result'='Test Passed';'recommendations' ="N/A";'Notes' = "N/A"}
 
 
             ###write-Host "SPN is Exist and Enabled - Test Passed" -ForegroundColor Green
@@ -314,7 +314,7 @@ if ($AllSPNs -match "981f26a1-7f43-403b-a875-f8b09b8cd720")
             {
 
             
-            $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if Azure MFA SPN is Enabled in the tenant';'Result'='Test Failed';'Recomendations' ="Check if you have a valid MFA License and it's active for Azure MFA NPS: https://docs.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#licenses";'Notes' = "If there is a valid Non expired license, then consult MS Support"}
+            $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if Azure MFA SPN is Enabled in the tenant';'Result'='Test Failed';'recommendations' ="Check if you have a valid MFA License and it's active for Azure MFA NPS: https://docs.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#licenses";'Notes' = "If there is a valid Non expired license, then consult MS Support"}
 
             ###write-Host "The SPN is Exist but not enabled, make sure that the SPN is enabled, Check your MFA license if it's valid - Test Failed" -ForegroundColor Red
             $SPNEnabled = "False"
@@ -329,7 +329,7 @@ Else
 $SPNExist="False"
 $SPNEnabled = "False"
 
-$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if Azure MFA SPN is Exist in the tenant';'Result'='Test Failed';'Recomendations' ="Check if you have a valid MFA License for Azure MFA NPS: https://docs.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#licenses";'Notes' = "If there is a valid Non expired license, then consult MS Support"}
+$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if Azure MFA SPN is Exist in the tenant';'Result'='Test Failed';'recommendations' ="Check if you have a valid MFA License for Azure MFA NPS: https://docs.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#licenses";'Notes' = "If there is a valid Non expired license, then consult MS Support"}
 
 }
 
@@ -355,7 +355,7 @@ if ($AuthorizationDLLs -eq "C:\Program Files\Microsoft\AzureMfa\Extensions\MfaNp
 $FirstSetofReg = "True"
 
 
-$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if Auth\Extension Registries have the correct values';'Result'='Test Passed';'Recomendations' ="N/A";'Notes' = "N/A"}
+$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if Auth\Extension Registries have the correct values';'Result'='Test Passed';'recommendations' ="N/A";'Notes' = "N/A"}
 
 
 }
@@ -368,7 +368,7 @@ Else
 
 $FirstSetofReg = "False"
 
-$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if Auth\Extension Registries have the correct values';'Result'='Test Failed';'Recomendations' ="Follow MS article: https://docs.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension-errors#troubleshooting-steps-for-common-errors";'Notes' = "As a quick solution, you can Re-register MFA extension again"}
+$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if Auth\Extension Registries have the correct values';'Result'='Test Failed';'recommendations' ="Follow MS article: https://docs.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension-errors#troubleshooting-steps-for-common-errors";'Notes' = "As a quick solution, you can Re-register MFA extension again"}
 
 }
 
@@ -393,7 +393,7 @@ if ($AZURE_MFA_HOSTNAME -eq "adnotifications.windowsazure.com" -and $AZURE_MFA_T
 
 $SecondSetofReg = "True"
 
-$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking Other MFA regstries status';'Result'='Test Passed';'Recomendations' ="N/A";'Notes' = "N/A"}
+$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking Other MFA Registry status';'Result'='Test Passed';'recommendations' ="N/A";'Notes' = "N/A"}
 
 
 }
@@ -407,7 +407,7 @@ Else
 $SecondSetofReg = "False"
 
 
-$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking Other MFA regstries status';'Result'='Test Failed';'Recomendations' ="Re-register the MFA extension or Consult MS Support";'Notes' = "N/A"}
+$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking Other MFA Registry status';'Result'='Test Failed';'recommendations' ="Re-register the MFA extension or Consult MS Support";'Notes' = "N/A"}
 
 
 }
@@ -485,7 +485,7 @@ for ($x=0;$x -lt $MatchedCert.Count ; $x++) {
                    $certificateResult = "False"
                    $ValidCertThumbprint = "False"
                    
-$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if there is a matched certificate with Azure MFA';'Result'='Test Failed';'Recomendations' ="Re-register the MFA NPS Extension again to generate new certifictae, more info: https://docs.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#how-do-i-verify-that-the-client-cert-is-installed-as-expected";'Notes' = "N/A"}
+$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if there is a matched certificate with Azure MFA';'Result'='Test Failed';'recommendations' ="Re-register the MFA NPS Extension again to generate new certifictae, more info: https://docs.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#how-do-i-verify-that-the-client-cert-is-installed-as-expected";'Notes' = "N/A"}
 
                    }
 
@@ -526,7 +526,7 @@ $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if there is 
 
   }
 
-  $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if there is a matched certificate with Azure MFA';'Result'='Test Passed';'Recomendations' ="N/A";'Notes' = "The matched Certificate(s) have these thumbprints: " + $ValidCertThumbprint}
+  $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if there is a matched certificate with Azure MFA';'Result'='Test Passed';'recommendations' ="N/A";'Notes' = "The matched Certificate(s) have these thumbprints: " + $ValidCertThumbprint}
 
 
   }
@@ -537,7 +537,7 @@ $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if there is 
  ### Write-Host 'No Valid certificate' -ForegroundColor Red
 
   $certificateResult = "False"
-  $objects += New-Object -Type PSObject -Prop @{'Test Name'='Check if there is a matched certificate with Azure MFA';'Result'='Test Failed';'Recomendations' ="Re-register the MFA NPS Extension again to generate new certifictae, more info: https://docs.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#how-do-i-verify-that-the-client-cert-is-installed-as-expected";'Notes' = "N/A"}
+  $objects += New-Object -Type PSObject -Prop @{'Test Name'='Check if there is a matched certificate with Azure MFA';'Result'='Test Failed';'recommendations' ="Re-register the MFA NPS Extension again to generate new certifictae, more info: https://docs.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#how-do-i-verify-that-the-client-cert-is-installed-as-expected";'Notes' = "N/A"}
 
 
 }
@@ -566,7 +566,7 @@ $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if there is 
 #$updateResult = "False"
 #
 #     
-#   $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking missing Updates on the server';'Result'='Test Failed';'Recomendations' ="Usually we recomend to install all missing updates, please make a good plan before you proceed with the installtion";'Notes' = "Current missing updates is: " + $ListofMissingUpdates.title}
+#   $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking missing Updates on the server';'Result'='Test Failed';'recommendations' ="Usually we recommend to install all missing updates, please make a good plan before you proceed with the installtion";'Notes' = "Current missing updates is: " + $ListofMissingUpdates.title}
 #
 #
 #}
@@ -576,7 +576,7 @@ $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if there is 
 #### write-Host "The server is up to date" -ForegroundColor Green
 #$updateResult = "True"
 #
-#$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking missing Updates on the server';'Result'='Test Passed';'Recomendations' ="N/A";'Notes' = "N/A"}
+#$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking missing Updates on the server';'Result'='Test Passed';'recommendations' ="N/A";'Notes' = "N/A"}
 #}
 #
 #
