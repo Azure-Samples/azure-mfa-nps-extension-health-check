@@ -459,7 +459,7 @@ for ($i=0;$i -lt $NumberofCert-1; $i++) {
 
 # matched Cert from items in $localcert an $TP 
 
-$MatchedCert = $TP | Where {$localCert -Contains $_}
+$MatchedCert = @($TP | Where {$localCert -Contains $_})
 
 if ($MatchedCert.count -gt 0)
    {
