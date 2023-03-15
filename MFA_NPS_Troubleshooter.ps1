@@ -386,7 +386,7 @@ $CLIENT_ID = (Get-ItemProperty -path HKLM:\SOFTWARE\Microsoft\AzureMfa -name "CL
 
 $STS_URL = (Get-ItemProperty -path HKLM:\SOFTWARE\Microsoft\AzureMfa -name "STS_URL").STS_URL
 
-if ($AZURE_MFA_HOSTNAME -eq "adnotifications.windowsazure.com" -and $AZURE_MFA_TARGET_PATH -eq "StrongAuthenticationService.svc/Connector" -and $CLIENT_ID -eq "981f26a1-7f43-403b-a875-f8b09b8cd720" -and $STS_URL -eq "https://login.microsoftonline.com/")
+if ($AZURE_MFA_HOSTNAME -eq "strongauthenticationservice.auth.microsoft.com" -and $AZURE_MFA_TARGET_PATH -eq "StrongAuthenticationService.svc/Connector" -and $CLIENT_ID -eq "981f26a1-7f43-403b-a875-f8b09b8cd720" -and $STS_URL -eq "https://login.microsoftonline.com/")
 
 {
 
