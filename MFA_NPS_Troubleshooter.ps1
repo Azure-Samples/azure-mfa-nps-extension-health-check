@@ -1024,8 +1024,21 @@ $ErrorActionPreference= 'silentlycontinue'
 #start collecting logs
 Set-Itemproperty -path 'HKLM:\SOFTWARE\Microsoft\AzureMfa' -Name 'VERBOSE_LOG' -value 'True'
 
-mkdir c:\NPS
-cd C:\NPS
+$DirectoryToCreate = "C:\NPS"
+if (-not (Test-Path -LiteralPath $DirectoryToCreate)) {
+    
+    try {
+        New-Item -Path $DirectoryToCreate -ItemType Directory -ErrorAction Stop | Out-Null #-Force
+    }
+    catch {
+        Write-Error -Message "Unable to create directory '$DirectoryToCreate'. Error was: $_" -ErrorAction Stop
+    }
+    "Successfully created directory '$DirectoryToCreate'."
+
+}
+else {
+    "Directory already existed"
+}
 Remove-Item "c:\nps\*.txt", "c:\nps\*.evtx", "c:\nps\*.etl","c:\nps\*.log", "c:\nps\*.cab"
 
 netsh trace start capture=yes overwrite=yes  tracefile=C:\NPS\nettrace.etl
@@ -1092,6 +1105,22 @@ $AuthorizationDLLs_Backup = (Get-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE
 $ExtensionDLLs_Backup = (Get-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\AuthSrv\Parameters -Name ExtensionDLLs).ExtensionDLLs
 
 Write-Host -ForegroundColor Yellow "Exporting the NPS MFA registry keys."
+$DirectoryToCreate = "C:\NPS"
+if (-not (Test-Path -LiteralPath $DirectoryToCreate)) {
+    
+    try {
+        New-Item -Path $DirectoryToCreate -ItemType Directory -ErrorAction Stop | Out-Null #-Force
+    }
+    catch {
+        Write-Error -Message "Unable to create directory '$DirectoryToCreate'. Error was: $_" -ErrorAction Stop
+    }
+    "Successfully created directory '$DirectoryToCreate'."
+
+}
+else {
+    "Directory already existed"
+}
+Remove-Item "c:\nps\*.txt", "c:\nps\*.evtx", "c:\nps\*.etl","c:\nps\*.log", "c:\nps\*.cab"
 reg export hklm\system\currentcontrolset\services\authsrv c:\nps\AuthSrv.reg /y 
 
 Set-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\AuthSrv\Parameters -Name AuthorizationDLLs -Value ''
