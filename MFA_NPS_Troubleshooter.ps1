@@ -1085,6 +1085,11 @@ Function MFAorNPS
 
 # This test will remove the MFA registry key and restart NPS, so that you can determine if the issue related to MFA or NPS.
 
+Write-Host 
+Write-Host -ForegroundColor Yellow "In this test we will remove some registry keys that will bypass the MFA module to determine if the issue is related to the MFA extension or the NPS role.  After the test finishes the regkeys will be restored."
+Write-Host -ForegroundColor Red -BackgroundColor White "Press ENTER to continue, otherwise please close the PowerShell window or hit CTRL+C to exit script." 
+Read-Host  
+
 $AuthorizationDLLs_Backup = ''
 $ExtensionDLLs_Backup = ''
 
@@ -1092,15 +1097,11 @@ $AuthorizationDLLs_Backup = (Get-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE
 $ExtensionDLLs_Backup = (Get-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\AuthSrv\Parameters -Name ExtensionDLLs).ExtensionDLLs
 
 Write-Host -ForegroundColor Yellow "Exporting the NPS MFA registry keys."
-reg export hklm\system\currentcontrolset\services\authsrv c:\nps\AuthSrv.reg /y 
+reg export hklm\system\currentcontrolset\services\authsrv c:\nps\AuthSrv.reg /y  
 
+Write-Host -ForegroundColor Yellow "Disabling the NPS MFA registry keys."
 Set-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\AuthSrv\Parameters -Name AuthorizationDLLs -Value ''
 Set-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\AuthSrv\Parameters -Name ExtensionDLLs -Value ''
-
-Write-Host 
-Write-Host -ForegroundColor Yellow "In this test we will remove some registry keys that will bypass the MFA module to determine if the issue is related to the MFA extension or the NPS role.  After the test finishes the regkeys will be restored."
-Write-Host -ForegroundColor Red -BackgroundColor White "Press ENTER to continue, otherwise please close the PowerShell window or hit CTRL+C to exit script." 
-Read-Host   
 
 Write-Host -ForegroundColor Green "Restarting NPS" 
 Stop-Service -Name "IAS" -Force
@@ -1110,6 +1111,7 @@ Write-Host
 Write-Host -ForegroundColor Yellow "Try to repro the issue now.  If the user is now able to connect successfully without MFA then the issue is related more to the MFA module.  After you finish this test press Enter to restore the MFA functionality." 
 Read-Host
 
+Write-Host -ForegroundColor Yellow "Restoring the NPS MFA registry keys."
 Set-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\AuthSrv\Parameters -Name AuthorizationDLLs -Value $AuthorizationDLLs_Backup
 Set-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\AuthSrv\Parameters -Name ExtensionDLLs -Value $ExtensionDLLs_Backup
 
