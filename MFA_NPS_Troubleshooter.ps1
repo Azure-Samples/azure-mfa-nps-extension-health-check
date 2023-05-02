@@ -1,13 +1,13 @@
-﻿  
+Clear-Host  
 Write-Host "*********************************************************************************"
 
 Write-Host "**** Welcome to MFA NPS Extension Troubleshooter Tool ****" -ForegroundColor Green
 
 Write-Host "**** This Tool will help you to troubleshoot MFA NPS Extension Knows issues ****" -ForegroundColor Green
 
-Write-Host "**** Tool Version is 2.0, Make Sure to Visit MS site to get the latest version ****" -ForegroundColor Green
+Write-Host "**** Tool Version is 2.1, Make Sure to Visit MS site to get the latest version ****" -ForegroundColor Green
 
-Write-Host "**** Thank you for Using MS Products, Microsoft @2022 ****" -ForegroundColor Green
+Write-Host "**** Thank you for Using MS Products, Microsoft @2023 ****" -ForegroundColor Green
 
 Write-Host "*******************************************************************************"
 
@@ -592,10 +592,23 @@ write-Host "Connection to Azure Failed - Skipped all tests, please make sure to 
 #cd c:\
 Push-Location "C:\"
 
+# Check if output directory C:\NPS is created. If not, create a new C:\NPS folder
+$DirectoryToCreate = "c:\AzureReport"
+if (-not (Test-Path -LiteralPath $DirectoryToCreate)) {
+    
+    try {
+        New-Item -Path $DirectoryToCreate -ItemType Directory -ErrorAction Stop | Out-Null #-Force
+    }
+    catch {
+        Write-Error -Message "Unable to create directory '$DirectoryToCreate'. Error was: $_" -ErrorAction Stop
+    }
+    "Successfully created directory '$DirectoryToCreate'."
 
-mkdir c:\AzureReport
-
-
+}
+else {
+    "Directory '$DirectoryToCreate' already existed"
+}
+Remove-Item "c:\AzureReport\*.html"
 
 if ($objects -ne $null)
 
@@ -1024,6 +1037,7 @@ $ErrorActionPreference= 'silentlycontinue'
 #start collecting logs
 Set-Itemproperty -path 'HKLM:\SOFTWARE\Microsoft\AzureMfa' -Name 'VERBOSE_LOG' -value 'True'
 
+# Check if output directory C:\NPS is created. If not, create a new C:\NPS folder
 $DirectoryToCreate = "C:\NPS"
 if (-not (Test-Path -LiteralPath $DirectoryToCreate)) {
     
@@ -1037,7 +1051,7 @@ if (-not (Test-Path -LiteralPath $DirectoryToCreate)) {
 
 }
 else {
-    "Directory already existed"
+    "Directory '$DirectoryToCreate' already existed"
 }
 Remove-Item "c:\nps\*.txt", "c:\nps\*.evtx", "c:\nps\*.etl","c:\nps\*.log", "c:\nps\*.cab"
 
@@ -1104,7 +1118,12 @@ $ExtensionDLLs_Backup = ''
 $AuthorizationDLLs_Backup = (Get-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\AuthSrv\Parameters -Name AuthorizationDLLs).AuthorizationDLLs
 $ExtensionDLLs_Backup = (Get-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\AuthSrv\Parameters -Name ExtensionDLLs).ExtensionDLLs
 
-Write-Host -ForegroundColor Yellow "Exporting the NPS MFA registry keys."
+Write-Host 
+Write-Host -ForegroundColor Yellow "In this test we will remove some registry keys that will bypass the MFA module to determine if the issue is related to the MFA extension or the NPS role.  After the test finishes the regkeys will be restored."
+Write-Host -ForegroundColor Red -BackgroundColor White "Press ENTER to continue, otherwise please close the PowerShell window or hit CTRL+C to exit script." 
+Read-Host
+
+# Check if output directory C:\NPS is created. If not, create a new C:\NPS folder
 $DirectoryToCreate = "C:\NPS"
 if (-not (Test-Path -LiteralPath $DirectoryToCreate)) {
     
@@ -1118,18 +1137,17 @@ if (-not (Test-Path -LiteralPath $DirectoryToCreate)) {
 
 }
 else {
-    "Directory already existed"
+    "Directory '$DirectoryToCreate' already existed"
 }
 Remove-Item "c:\nps\*.txt", "c:\nps\*.evtx", "c:\nps\*.etl","c:\nps\*.log", "c:\nps\*.cab"
+
+# Export NPS MFA registry keys
+Write-Host -ForegroundColor Yellow "Exporting the NPS MFA registry keys."
+
 reg export hklm\system\currentcontrolset\services\authsrv c:\nps\AuthSrv.reg /y 
 
 Set-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\AuthSrv\Parameters -Name AuthorizationDLLs -Value ''
 Set-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\AuthSrv\Parameters -Name ExtensionDLLs -Value ''
-
-Write-Host 
-Write-Host -ForegroundColor Yellow "In this test we will remove some registry keys that will bypass the MFA module to determine if the issue is related to the MFA extension or the NPS role.  After the test finishes the regkeys will be restored."
-Write-Host -ForegroundColor Red -BackgroundColor White "Press ENTER to continue, otherwise please close the PowerShell window or hit CTRL+C to exit script." 
-Read-Host   
 
 Write-Host -ForegroundColor Green "Restarting NPS" 
 Stop-Service -Name "IAS" -Force
@@ -1177,4 +1195,3 @@ if ($Choice_Number -eq '1') { MFAorNPS }
 if ($Choice_Number -eq '2') { Check_Nps_Server_Module }
 if ($Choice_Number -eq '3') { User_Test_Module }
 if ($Choice_Number -eq '4') { collect_logs }
-
