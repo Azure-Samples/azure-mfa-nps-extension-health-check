@@ -26,15 +26,13 @@ The script performs the following test against MFA Extension Server:
 
 1. Check accessibility to https://login.microsoftonline.com
 1. Check accessibility to https://adnotifications.windowsazure.com
+1. Check accessibility to https://strongauthenticationservice.auth.microsoft.com
 1. Check MFA version.
 1. Check if the NPS Service is *Running*.
-1. Check if the SPN for Azure MFA is *Exist* and *Enabled*.
+1. Check if the SPN for Azure MFA *Exists* and is *Enabled*.
 1. Check if *Authorization* and *Extension* registry keys have the right values.
 1. Check other Azure MFA related registry keys have the right values.
 1. Check if there is a valid certificated matched with the certificates stored in Azure AD.
-1. Check the time synchronization in the Server.
-1. Compare server time with reliable time server.
-1. Check all missing updates on the server.
 
 ## How the results will be displayed
 
