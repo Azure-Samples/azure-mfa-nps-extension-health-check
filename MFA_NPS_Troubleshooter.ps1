@@ -1,20 +1,14 @@
-Clear-Host  
+Clear-Host
+
 Write-Host "*********************************************************************************"
-
 Write-Host "**** Welcome to MFA NPS Extension Troubleshooter Tool ****" -ForegroundColor Green
-
 Write-Host "**** This Tool will help you to troubleshoot MFA NPS Extension Knows issues ****" -ForegroundColor Green
-
-Write-Host "**** Tool Version is 2.1, Make Sure to Visit MS site to get the latest version ****" -ForegroundColor Green
-
+Write-Host "**** Tool Version is 2.2, Make Sure to Visit MS site to get the latest version ****" -ForegroundColor Green
 Write-Host "**** Thank you for Using MS Products, Microsoft @2023 ****" -ForegroundColor Green
-
 Write-Host "*******************************************************************************"
 
 Write-Host
-
 Write-Host
-
 Write-Host
 
 Write-Host " Please Choose one of the tests below: " -ForegroundColor Yellow
@@ -27,16 +21,16 @@ Write-Host " (3) Specific User not able to use MFA NPS Extension (Test MFA for s
 Write-Host
 Write-Host " (4) Collect Logs to contact MS support (Enable Logging/Restart NPS/Gather Logs)... " -ForegroundColor Green
 Write-Host
-Write-Host " (E) EXIT SCRIPT " -ForegroundColor Red
+Write-Host " (E) EXIT SCRIPT " -ForegroundColor Red -BackgroundColor White
 Write-Host
 $Timestamp = "$((Get-Date).ToString("yyyyMMdd_HHmmss"))"
 $Choice_Number =''
-$Choice_Number = Read-Host -Prompt "Based on which test you need to run, please type 1, 2, 3, 4 or E to exit the test, then click enter " 
+$Choice_Number = Read-Host -Prompt "Based on which test you need to run, please type 1, 2, 3, 4 or E to exit the test. Then click Enter " 
 
 while ( !($Choice_Number -eq '1' -or $Choice_Number -eq '2' -or $Choice_Number -eq '3' -or $Choice_Number -eq '4' -or$Choice_Number -eq 'E'))
 {
 
-$Choice_Number = Read-Host -Prompt "Invalid Option, Based on which test you need to run, please type 1, 2, 3, 4 or E to exit the test, then click enter " 
+$Choice_Number = Read-Host -Prompt "Invalid Option, Based on which test you need to run, please type 1, 2, 3, 4 or E to exit the test. Then click Enter " 
 
 }
 
@@ -47,15 +41,7 @@ $Choice_Number = Read-Host -Prompt "Invalid Option, Based on which test you need
 ##### Microsoft 2022 @Ahmad Yasin, Nate Harris (nathar), Will Aftring (wiaftin) ##########
 
 Function Check_Nps_Server_Module {
-$IWRADNotificationScriptBlock = {
-	try{
-		Invoke-WebRequest -Uri https://adnotifications.windowsazure.com
-	}
-	catch{
-		#This is the expected response for an unauthenticated request to the endpoint
-		($_.Exception.Message | Out-String).Trim() -eq "The remote server returned an error: (403) Forbidden."
-	}
-}
+$TestStepNumber = 0
 $ErrorActionPreference= 'silentlycontinue'
 $loginAccessResult = 'NA'
 $NotificationaccessResult = 'NA'
@@ -75,10 +61,35 @@ $ListofMissingUpdates = 'NA'
 $objects = @()
 $TCPLogin = $False
 $TCPAdnotification = $False
+$TCPStrongAuthService = $False
 $DNSLogin= $False
 $DNSADNotification =$False
+$DNSStrongAuthService = $False
 $IWRLogin = ""
 $IWRADNotification = ""
+$IWRStrongAuthService = ""
+$IWRADNotificationScriptBlock = {
+	try{
+		Invoke-WebRequest -Uri https://adnotifications.windowsazure.com
+	}
+	catch{
+		#This is the expected response for an unauthenticated request to the endpoint
+		($_.Exception.Message | Out-String).Trim() -eq "The remote server returned an error: (403) Forbidden."
+	}
+}
+$IWRStrongAuthServiceScriptBlock = {
+	try{
+		Invoke-WebRequest -Uri https://strongauthenticationservice.auth.microsoft.com
+	}
+	catch{
+		#This is the expected response for an unauthenticated request to the endpoint
+		($_.Exception.Message | Out-String).Trim() -eq "The remote server returned an error: (403) Forbidden."
+	}
+}
+
+Write-Host
+write-Host "Start Azure AD connection to be established with Global Admin role ..." -ForegroundColor Green
+Write-Host
 
 Connect-MsolService
 
@@ -87,14 +98,15 @@ $verifyConnection = Get-MsolDomain -ErrorAction SilentlyContinue
 if($verifyConnection -ne $null)
 {
  
-write-Host "Connection established Succesfully - Starting the HealthCheck Process ..." -ForegroundColor Green
 Write-Host
+write-Host "Connection established Successfully - Starting the Health Check Process ..." -ForegroundColor Green
 Write-Host
 write-host
 
 # Check the accessibility to login.microsoftonline.com and adnotifications.windowsazure.com
 
-write-Host "1- Checking Accessibility to https://login.microsoftonline.com ..." -ForegroundColor Yellow
+$TestStepNumber = $TestStepNumber + 1
+write-Host $TestStepNumber "- Checking Accessibility to https://login.microsoftonline.com ..." -ForegroundColor Yellow
 write-Host
 
 #Muath Updates:
@@ -125,12 +137,6 @@ $DNSLogin = (RunPSScript -PSScript "Test-NetConnection -ComputerName  login.micr
 
 $IWRLogin = (RunPSScript -PSScript "Invoke-WebRequest -Uri https://login.microsoftonline.com").StatusDescription
 
-########################################################################
-$TCPAdnotification = (RunPSScript -PSScript "Test-NetConnection -ComputerName adnotifications.windowsazure.com -Port 443").TcpTestSucceeded
-$DNSADNotification = (RunPSScript -PSScript "Test-NetConnection -ComputerName adnotifications.windowsazure.com -Port 443").NameResolutionSucceeded
-
-$IWRADNotification = (RunPSScript -PSScript $IWRADNotificationScriptBlock)
-
 #######################################################################
 
 #if ($TCPLogin -and $DNSLogin)
@@ -140,7 +146,7 @@ if (($TCPLogin -and $DNSLogin) -or $IWRLogin)
 ### write-Host "Test login.microsoftonline.com accessibility Passed" -ForegroundColor Green 
 
 
-$objects += New-Object -Type PSObject -Prop @{'Test Name'='Access To https://login.MicrosoftOnline.Com';'Result'='Test Passed';'recommendations' ="N/A";'Notes' = "N/A"}
+$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking accessiblity to https://login.microsoftonline.com';'Result'='Test Passed';'recommendations' ="N/A";'Notes' = "N/A"}
 
 
 $loginAccessResult = "True"
@@ -153,15 +159,21 @@ Else
 ### write-Host "Test login.microsoftonline.com accessibility Failed" -ForegroundColor Red
 
 $loginAccessResult = "False"
-$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking accessiblity to https://login.MicrosoftOnline.Com';'Result'='Test Failed';'recommendations' ="Follow MS article for remediation: https://docs.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#network-requirements";'Notes' = "This will cause MFA Methods to fail"}
+$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking accessiblity to https://login.microsoftonline.com';'Result'='Test Failed';'recommendations' ="Follow MS article for remediation: https://learn.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#network-requirements";'Notes' = "This will cause MFA Methods to fail"}
 
 
 }
 
-
-write-Host "2- Checking Accessibility to https://adnotifications.windowsazure.com ..." -ForegroundColor Yellow
+$TestStepNumber = $TestStepNumber + 1
+write-Host $TestStepNumber "- Checking Accessibility to https://adnotifications.windowsazure.com ..." -ForegroundColor Yellow
 Write-Host
 
+########################################################################
+$TCPAdnotification = (RunPSScript -PSScript "Test-NetConnection -ComputerName adnotifications.windowsazure.com -Port 443").TcpTestSucceeded
+$DNSADNotification = (RunPSScript -PSScript "Test-NetConnection -ComputerName adnotifications.windowsazure.com -Port 443").NameResolutionSucceeded
+
+$IWRADNotification = (RunPSScript -PSScript $IWRADNotificationScriptBlock)
+########################################################################
 
 #if ($TCPAdnotification -and $DNSADNotification)
 if (($TCPAdnotification -and $DNSADNotification) -or $IWRADNotification)
@@ -187,12 +199,52 @@ Else
 $NotificationaccessResult = "False"
 
 
-$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking accessiblity to adnotifications.windowsazure.com accessibility';'Result'='Test Failed';'recommendations' ="Follow MS article for remediation:https://docs.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#network-requirements";'Notes' = "This will cause MFA Methods to fail"}
+$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking accessiblity to https://adnotifications.windowsazure.com';'Result'='Test Failed';'recommendations' ="Follow MS article for remediation: https://learn.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#network-requirements";'Notes' = "This will cause MFA Methods to fail"}
 
 
 }
 
-write-Host "3- Checking MFA version ... " -ForegroundColor Yellow
+$TestStepNumber = $TestStepNumber + 1
+write-Host $TestStepNumber "- Checking Accessibility to https://strongauthenticationservice.auth.microsoft.com ..." -ForegroundColor Yellow
+Write-Host
+
+########################################################################
+$TCPStrongAuthService = (RunPSScript -PSScript "Test-NetConnection -ComputerName strongauthenticationservice.auth.microsoft.com -Port 443").TcpTestSucceeded
+$DNSStrongAuthService = (RunPSScript -PSScript "Test-NetConnection -ComputerName strongauthenticationservice.auth.microsoft.com -Port 443").NameResolutionSucceeded
+
+$IWRStrongAuthService = (RunPSScript -PSScript $IWRStrongAuthServiceScriptBlock)
+########################################################################
+
+#if ($TCPAdnotification -and $DNSADNotification)
+if (($TCPStrongAuthService -and $DNSStrongAuthService) -or $IWRStrongAuthService)
+
+{
+
+### write-Host "Test strongauthenticationservice.auth.microsoft.com accessibility Passed" -ForegroundColor Green
+
+$NotificationaccessResult = "True"
+
+
+$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking accessiblity to https://strongauthenticationservice.auth.microsoft.com';'Result'='Test Passed';'recommendations' ="N/A";'Notes' = "N/A"}
+
+
+}
+
+Else
+
+{
+### write-Host "Test https://strongauthenticationservice.auth.microsoft.com accessibility Failed" -ForegroundColor Red
+
+$NotificationaccessResult = "False"
+
+
+$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking accessiblity to https://strongauthenticationservice.auth.microsoft.com';'Result'='Test Failed';'recommendations' ="Follow MS article for remediation: https://learn.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#network-requirements";'Notes' = "This will cause MFA Methods to fail"}
+
+
+}
+
+$TestStepNumber = $TestStepNumber + 1
+write-Host $TestStepNumber "- Checking MFA version ... " -ForegroundColor Yellow
 Write-Host
 
 # Get MFA NPS installed version
@@ -231,7 +283,7 @@ Else
 
 $MFATestVersion = "False"
 
-$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if the current installed MFA NPS Extension Version is the latest';'Result'='Test Failed';'recommendations' ="Make sure to Upgrade to the latest version";'Notes' = "Current installed MFA Version is: " +$MFAVersion}
+$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if the current installed MFA NPS Extension Version is the latest';'Result'='Test Failed';'recommendations' ="Make sure to Upgrade to the latest version";'Notes' = "Current installed MFA Version is: " + $MFAVersion}
 
 
 }
@@ -240,8 +292,8 @@ $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if the curre
 
 # Check if the NPS Service is Running or not
 
-
-write-Host "4- Checking if the NPS Service is Running ..." -ForegroundColor Yellow
+$TestStepNumber = $TestStepNumber + 1
+write-Host $TestStepNumber "- Checking if the NPS Service is Running ..." -ForegroundColor Yellow
 Write-Host
 
 if (((Get-Service -Name ias).status -eq "Running"))
@@ -271,8 +323,8 @@ $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if NPS Servi
 
 
 # It will check the MS SPN in Cloud is Exist and Enabled
-
-write-Host "5- Checking if the SPN for Azure MFA is Exist and Enabled ..." -ForegroundColor Yellow
+$TestStepNumber = $TestStepNumber + 1
+write-Host $TestStepNumber "- Checking if the SPN for Azure MFA Exists and is Enabled ..." -ForegroundColor Yellow
 write-host
 
 
@@ -292,7 +344,7 @@ if ($AllSPNs -match "981f26a1-7f43-403b-a875-f8b09b8cd720")
             $SPNExist = "True"
 
             
-            $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if Azure MFA SPN is Exist in the tenant';'Result'='Test Passed';'recommendations' ="N/A";'Notes' = "N/A"}
+            $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if Azure MFA SPN Exists in the tenant';'Result'='Test Passed';'recommendations' ="N/A";'Notes' = "N/A"}
 
 
             # Test if the SPN is enabled or Disabled
@@ -315,7 +367,7 @@ if ($AllSPNs -match "981f26a1-7f43-403b-a875-f8b09b8cd720")
             {
 
             
-            $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if Azure MFA SPN is Enabled in the tenant';'Result'='Test Failed';'recommendations' ="Check if you have a valid MFA License and it's active for Azure MFA NPS: https://docs.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#licenses";'Notes' = "If there is a valid Non expired license, then consult MS Support"}
+            $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if Azure MFA SPN is Enabled in the tenant';'Result'='Test Failed';'recommendations' ="Check if you have a valid MFA License and it's active for Azure MFA NPS: https://learn.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#licenses";'Notes' = "If there is a valid Non expired license, then consult MS Support"}
 
             ###write-Host "The SPN is Exist but not enabled, make sure that the SPN is enabled, Check your MFA license if it's valid - Test Failed" -ForegroundColor Red
             $SPNEnabled = "False"
@@ -330,7 +382,7 @@ Else
 $SPNExist="False"
 $SPNEnabled = "False"
 
-$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if Azure MFA SPN is Exist in the tenant';'Result'='Test Failed';'recommendations' ="Check if you have a valid MFA License for Azure MFA NPS: https://docs.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#licenses";'Notes' = "If there is a valid Non expired license, then consult MS Support"}
+$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if Azure MFA SPN Exists in the tenant';'Result'='Test Failed';'recommendations' ="Check if you have a valid MFA License for Azure MFA NPS: https://learn.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#licenses";'Notes' = "If there is a valid Non expired license, then consult MS Support"}
 
 }
 
@@ -338,8 +390,8 @@ $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if Azure MFA
 #check all registry keys for MFA NPS Extension
 
 # 1- It will check if the MFA NPS reg have the correct values.
-
-Write-Host "6- Checking if Authorization and Extension Registry keys have the right values ... " -ForegroundColor Yellow
+$TestStepNumber = $TestStepNumber + 1
+write-Host $TestStepNumber "- Checking if Authorization and Extension Registry keys have the right values ... " -ForegroundColor Yellow
 Write-Host
 
 $AuthorizationDLLs = (Get-ItemProperty -path HKLM:\SYSTEM\CurrentControlSet\Services\AuthSrv\Parameters -name "AuthorizationDLLs").AuthorizationDLLs
@@ -356,7 +408,7 @@ if ($AuthorizationDLLs -eq "C:\Program Files\Microsoft\AzureMfa\Extensions\MfaNp
 $FirstSetofReg = "True"
 
 
-$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if Auth\Extension Registries have the correct values';'Result'='Test Passed';'recommendations' ="N/A";'Notes' = "N/A"}
+$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if Auth\Extension Registry keys have the correct values';'Result'='Test Passed';'recommendations' ="N/A";'Notes' = "N/A"}
 
 
 }
@@ -369,16 +421,18 @@ Else
 
 $FirstSetofReg = "False"
 
-$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if Auth\Extension Registries have the correct values';'Result'='Test Failed';'recommendations' ="Follow MS article: https://docs.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension-errors#troubleshooting-steps-for-common-errors";'Notes' = "As a quick solution, you can Re-register MFA extension again"}
+$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if Auth\Extension Registry keys have the correct values';'Result'='Test Failed';'recommendations' ="Follow MS article: https://learn.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension-errors#troubleshooting-steps-for-common-errors";'Notes' = "As a quick solution, you can Re-register MFA extension again"}
 
 }
 
 # 2- Check for other registry keys
-
-Write-Host "7- Checking other Azure MFA related Registry keys have the right values ... " -ForegroundColor Yellow
+$TestStepNumber = $TestStepNumber + 1
+write-Host $TestStepNumber "- Checking other Azure MFA related Registry keys have the right values ... " -ForegroundColor Yellow
 Write-Host
 
 $AZURE_MFA_HOSTNAME = (Get-ItemProperty -path HKLM:\SOFTWARE\Microsoft\AzureMfa -name "AZURE_MFA_HOSTNAME").AZURE_MFA_HOSTNAME
+
+$AZURE_MFA_RESOURCE_HOSTNAME = (Get-ItemProperty -path HKLM:\SOFTWARE\Microsoft\AzureMfa -name "AZURE_MFA_RESOURCE_HOSTNAME").AZURE_MFA_RESOURCE_HOSTNAME
 
 $AZURE_MFA_TARGET_PATH = (Get-ItemProperty -path HKLM:\SOFTWARE\Microsoft\AzureMfa -name "AZURE_MFA_TARGET_PATH").AZURE_MFA_TARGET_PATH
 
@@ -386,7 +440,7 @@ $CLIENT_ID = (Get-ItemProperty -path HKLM:\SOFTWARE\Microsoft\AzureMfa -name "CL
 
 $STS_URL = (Get-ItemProperty -path HKLM:\SOFTWARE\Microsoft\AzureMfa -name "STS_URL").STS_URL
 
-if ($AZURE_MFA_HOSTNAME -eq "strongauthenticationservice.auth.microsoft.com" -and $AZURE_MFA_TARGET_PATH -eq "StrongAuthenticationService.svc/Connector" -and $CLIENT_ID -eq "981f26a1-7f43-403b-a875-f8b09b8cd720" -and $STS_URL -eq "https://login.microsoftonline.com/")
+if ($AZURE_MFA_HOSTNAME -eq "strongauthenticationservice.auth.microsoft.com" -and $AZURE_MFA_RESOURCE_HOSTNAME -eq "adnotifications.windowsazure.com" -and $AZURE_MFA_TARGET_PATH -eq "StrongAuthenticationService.svc/Connector" -and $CLIENT_ID -eq "981f26a1-7f43-403b-a875-f8b09b8cd720" -and $STS_URL -eq "https://login.microsoftonline.com/")
 
 {
 
@@ -394,7 +448,7 @@ if ($AZURE_MFA_HOSTNAME -eq "strongauthenticationservice.auth.microsoft.com" -an
 
 $SecondSetofReg = "True"
 
-$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking Other MFA Registry status';'Result'='Test Passed';'recommendations' ="N/A";'Notes' = "N/A"}
+$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking Other MFA Registry keys status';'Result'='Test Passed';'recommendations' ="N/A";'Notes' = "N/A"}
 
 
 }
@@ -408,14 +462,14 @@ Else
 $SecondSetofReg = "False"
 
 
-$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking Other MFA Registry status';'Result'='Test Failed';'recommendations' ="Re-register the MFA extension or Consult MS Support";'Notes' = "N/A"}
+$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking Other MFA Registry keys status';'Result'='Test Failed';'recommendations' ="Re-register the MFA extension or Consult MS Support";'Notes' = "N/A"}
 
 
 }
 
 # below section is to check the current cert in Azure and current Cert in local NPS Server
-
-Write-Host "8- Checking if there is a valid certificated matched with the Certificates stored in Azure AD ..." -ForegroundColor Yellow
+$TestStepNumber = $TestStepNumber + 1
+write-Host $TestStepNumber "- Checking if there is a valid certificated matched with the Certificates stored in Azure AD ..." -ForegroundColor Yellow
 write-host
 
 
@@ -485,8 +539,7 @@ for ($x=0;$x -lt $MatchedCert.Count ; $x++) {
                    
                    $certificateResult = "False"
                    $ValidCertThumbprint = "False"
-                   
-$objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if there is a matched certificate with Azure MFA';'Result'='Test Failed';'recommendations' ="Re-register the MFA NPS Extension again to generate new certifictae, more info: https://docs.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#how-do-i-verify-that-the-client-cert-is-installed-as-expected";'Notes' = "N/A"}
+                   $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if there is a matched certificate with Azure MFA';'Result'='Test Failed';'recommendations' ="Re-register the MFA NPS Extension again to generate new certifictae, more info: https://docs.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#how-do-i-verify-that-the-client-cert-is-installed-as-expected";'Notes' = "N/A"}
 
                    }
 
@@ -538,7 +591,7 @@ $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if there is 
  ### Write-Host 'No Valid certificate' -ForegroundColor Red
 
   $certificateResult = "False"
-  $objects += New-Object -Type PSObject -Prop @{'Test Name'='Check if there is a matched certificate with Azure MFA';'Result'='Test Failed';'recommendations' ="Re-register the MFA NPS Extension again to generate new certifictae, more info: https://docs.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#how-do-i-verify-that-the-client-cert-is-installed-as-expected";'Notes' = "N/A"}
+  $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if there is a matched certificate with Azure MFA';'Result'='Test Failed';'recommendations' ="Re-register the MFA NPS Extension again to generate new certifictae, more info: https://learn.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#how-do-i-verify-that-the-client-cert-is-installed-as-expected";'Notes' = "N/A"}
 
 
 }
@@ -586,30 +639,9 @@ else
 {
 write-Host "Connection to Azure Failed - Skipped all tests, please make sure to connect to your tenant first with global Admin role ..." -ForegroundColor Red
 
-
 }
 
-#cd c:\
-Push-Location "C:\"
-
-# Check if output directory C:\NPS is created. If not, create a new C:\NPS folder
-$DirectoryToCreate = "c:\AzureReport"
-if (-not (Test-Path -LiteralPath $DirectoryToCreate)) {
-    
-    try {
-        New-Item -Path $DirectoryToCreate -ItemType Directory -ErrorAction Stop | Out-Null #-Force
-    }
-    catch {
-        Write-Error -Message "Unable to create directory '$DirectoryToCreate'. Error was: $_" -ErrorAction Stop
-    }
-    "Successfully created directory '$DirectoryToCreate'."
-
-}
-else {
-    "Directory '$DirectoryToCreate' already existed"
-}
-Remove-Item "c:\AzureReport\*.html"
-
+# Check if tests were done or not
 if ($objects -ne $null)
 
 {
@@ -639,6 +671,27 @@ tr:nth-child(even) {
 "@
 
 #$objects | ConvertTo-HTML -As Table -Fragment | Out-File c:\test1.html
+
+#cd c:\
+Push-Location "C:\"
+
+# Check if output directory C:\AzureReport is created. If not, create a new C:\AzureReport folder
+$DirectoryToCreate = "c:\AzureReport"
+if (-not (Test-Path -LiteralPath $DirectoryToCreate)) {
+    
+    try {
+        New-Item -Path $DirectoryToCreate -ItemType Directory -ErrorAction Stop | Out-Null #-Force
+    }
+    catch {
+        Write-Error -Message "Unable to create directory '$DirectoryToCreate'. Error was: $_" -ErrorAction Stop
+    }
+    "Successfully created directory '$DirectoryToCreate'."
+
+}
+else {
+    "Directory '$DirectoryToCreate' already existed"
+}
+Remove-Item "c:\AzureReport\*.html"
 
 $objects | ConvertTo-Html -Head $Header | Out-File c:\AzureReport\AzureMFAReport.html
 
@@ -1139,7 +1192,7 @@ if (-not (Test-Path -LiteralPath $DirectoryToCreate)) {
 else {
     "Directory '$DirectoryToCreate' already existed"
 }
-Remove-Item "c:\nps\*.txt", "c:\nps\*.evtx", "c:\nps\*.etl","c:\nps\*.log", "c:\nps\*.cab"
+Remove-Item "c:\nps\*.txt", "c:\nps\*.evtx", "c:\nps\*.etl","c:\nps\*.log", "c:\nps\*.cab", "c:\nps\*.zip", "c:\nps\*.reg"
 
 # Export NPS MFA registry keys
 Write-Host -ForegroundColor Yellow "Exporting the NPS MFA registry keys."
