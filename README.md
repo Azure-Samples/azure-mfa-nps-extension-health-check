@@ -10,7 +10,13 @@ urlFragment: "azure-mfa-nps-extension-health-check"
 
 # Azure MFA NPS extension health check script
 
-Script to run against Azure MFA NPS Extension servers to perform some basic checks to detect any issues. The output will be in HTML format.
+Script to run against Azure MFA NPS Extension servers to perform some basic checks to detect any issues.
+
+Here's a quick summary about each available option when the script is run:
+1. To isolate the cause of the issue: if it's an NPS or MFA issue (Export MFA RegKeys, Restart NPS, Test, Import RegKeys, Restart NPS)
+1. To check a full set of tests, when not all users can use the MFA NPS Extension (Testing Access to Azure/Create HTML Report)
+1. To check a specific set of tests, when a specific user can't use the MFA NPS Extension (Test MFA for specific UPN)
+1. To collect logs to contact Microsoft support (Enable Logging/Restart NPS/Gather Logs). The output will be in HTML format.
 
 ## Script requirements
 
@@ -18,12 +24,20 @@ The script needs to be run as a user with local admin privilege on the server, a
 
 ## How to run the script
 
-Download and run the `MFA_NPS_Troubleshooter.ps1` script from this GitHub repo.
+Download and run the `MFA_NPS_Troubleshooter.ps1` script from this GitHub repo. Select one of the available options, based on what goal to achieve.
 
 ## What tests the script performs
 
-The script performs the following test against MFA Extension Server:
+Based on each option selection, performs the following test against MFA Extension Server:
 
+**Option 1**:
+1. Export the current registry keys for NPS Extension configuration
+1. Restarts NPS Extension with empty registry keys
+1. User performs simulation of current situation being checked
+1. Import to current registry keys for NPS Extension configuration from previous backed up information
+1. Restarts NPS Extension with configured registry keys
+
+**Option 2**:
 1. Check accessibility to https://login.microsoftonline.com
 1. Check accessibility to https://adnotifications.windowsazure.com
 1. Check accessibility to https://strongauthenticationservice.auth.microsoft.com
@@ -34,7 +48,22 @@ The script performs the following test against MFA Extension Server:
 1. Check other Azure MFA related registry keys have the right values.
 1. Check if there is a valid certificated matched with the certificates stored in Azure AD.
 
-## How the results will be displayed
+**Option 3**:
+1. Check if user account *Exists* in Azure AD
+1. Check if use is synched to Azure AD from On premises
+1. Check if user is blocked on Azure AD or not
+1. Check if user status is healthy in Azure AD
+1. Check if user has completed MFA Proofup in Azure AD
+1. Check if user has a valid license for MFA
+1. Check user Dial-In status on local AD
+
+**Option 4**:
+1. Enable logging for NPS Extension feature and dependent services
+1. Restart NPS Extension
+1. User performs simulation of current situation being checked
+1. When simulation ends, it will generate a ZIP file with all log files required
+
+## How the results will be displayed when output to HTML (option 2)
 
 In PowerShell console it will only display the tests name, then it will convert the result to HTML file located at `C:\AzureMFAReport.html`.
 
