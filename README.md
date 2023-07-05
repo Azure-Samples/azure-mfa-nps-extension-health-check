@@ -24,7 +24,9 @@ The script needs to be run as a user with local admin privilege on the server, a
 
 ## How to run the script
 
-Download and run the `MFA_NPS_Troubleshooter.ps1` script from this GitHub repo. Select one of the available options, based on what goal to achieve.
+Download and run the `MFA_NPS_Troubleshooter.ps1` script from this GitHub repo, by accessing **Browse Code** icon on top of this webpage, and then select **Download Zip** option, on green button **Code**.
+
+When running script file, select one of the available options, based on what goal to achieve.
 
 ## What tests the script performs
 
