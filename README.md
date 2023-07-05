@@ -24,9 +24,9 @@ The script needs to be run as a user with local admin privilege on the server, a
 
 ## How to run the script
 
-Download and run the `MFA_NPS_Troubleshooter.ps1` script from this GitHub repo, by accessing **Browse Code** icon on top of this webpage, and then select **Download Zip** option, on green button **Code**.
+To download and run the `MFA_NPS_Troubleshooter.ps1` script from this GitHub repo, click **Browse Code** on top of this webpage, and from the green **Code** pull-down menu, select **Download Zip**.
 
-When running script file, select one of the available options, based on what goal to achieve.
+When you run the script, select an option that meets your goal.
 
 ## What tests the script performs
 
@@ -67,7 +67,7 @@ Based on each option selection, performs the following test against MFA Extensio
 
 ## How the results will be displayed when output to HTML (option 2)
 
-In PowerShell console it will only display the tests name, then it will convert the result to HTML file located at `C:\AzureMFAReport.html`.
+In PowerShell console it will only display the test name, then it will convert the result to HTML file located at `C:\AzureMFAReport.html`.
 
 Example console output:
 
