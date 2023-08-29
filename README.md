@@ -40,9 +40,27 @@ Based on each option selection, performs the following test against MFA Extensio
 1. Restarts NPS Extension with configured registry keys
 
 **Option 2**:
+
+Based on each option selection, performs the following test against Azure cloud environment
+
+***Suboption 1***:
 1. Check accessibility to https://login.microsoftonline.com
 1. Check accessibility to https://adnotifications.windowsazure.com
 1. Check accessibility to https://strongauthenticationservice.auth.microsoft.com
+
+***Suboption 2***:
+1. Check accessibility to https://login.microsoftonline.us
+1. Check accessibility to https://adnotifications.windowsazure.us
+1. Check accessibility to https://strongauthenticationservice.auth.microsoft.us
+
+***Suboption 3***:
+1. Check accessibility to https://login.chinacloudapi.cn
+1. Check accessibility to https://adnotifications.windowsazure.cn
+1. Check accessibility to https://strongauthenticationservice.auth.microsoft.cn
+
+***Common***:
+
+4. Check accessibility to https://credentials.azure.com
 1. Check MFA version.
 1. Check if the NPS Service is *Running*.
 1. Check if the SPN for Azure MFA *Exists* and is *Enabled*.
