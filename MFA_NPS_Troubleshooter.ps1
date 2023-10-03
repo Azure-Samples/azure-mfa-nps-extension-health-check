@@ -3,7 +3,7 @@ Clear-Host
 Write-Host "*********************************************************************************"
 Write-Host "**** Welcome to MFA NPS Extension Troubleshooter Tool ****" -ForegroundColor Green
 Write-Host "**** This Tool will help you to troubleshoot MFA NPS Extension Knows issues ****" -ForegroundColor Green
-Write-Host "**** Tool Version is 2.5, Make Sure to Visit MS site to get the latest version ****" -ForegroundColor Green
+Write-Host "**** Tool Version is 2.6, Make Sure to Visit MS site to get the latest version ****" -ForegroundColor Green
 Write-Host "**** Thank you for Using MS Products, Microsoft @2023 ****" -ForegroundColor Green
 Write-Host "*******************************************************************************"
 
@@ -354,8 +354,18 @@ $MFAVersion = Get-WmiObject Win32_Product -Filter "Name like 'NPS Extension For 
 
 $MFADownloadPage = Invoke-WebRequest -Uri 'https://www.microsoft.com/en-us/download/details.aspx?id=54688'
 $MFADownloadPageHTML = $MFADownloadPage.RawContent
-$MFADownloadPageHTMLSplit = ($MFADownloadPageHTML -split '<div><h3 class="h6">Version:</h3><p style="overflow-wrap:break-word">',2)[1]
-$latestMFAVersion = ($MFADownloadPageHTMLSplit -split '</p></div><div><h3 class="h6">',2)[0]
+#$MFADownloadPageHTMLSplit = ($MFADownloadPageHTML -split '<h3 class="h6">Version:</h3><p style="overflow-wrap:break-word">',2)[1]
+$MFADownloadPageHTMLSplit = ($MFADownloadPageHTML -split '"version":"',2)[1]
+#$latestMFAVersion = ($MFADownloadPageHTMLSplit -split '</p></div><div',2)[0]
+$latestMFAVersion = ($MFADownloadPageHTMLSplit -split '","datePublished":',2)[0]
+
+#write-Host $MFADownloadPageHTML
+#write-Host
+#write-Host " # # # # # "
+#write-Host $MFADownloadPageHTMLSplit
+#write-Host
+#write-Host " # # # # # "
+#Write-Host $MFAVersion " # " $latestMFAVersion
 
 # Compare if the current version match the latest version
 
