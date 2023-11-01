@@ -3,7 +3,7 @@ Clear-Host
 Write-Host "*********************************************************************************"
 Write-Host "**** Welcome to MFA NPS Extension Troubleshooter Tool ****" -ForegroundColor Green
 Write-Host "**** This Tool will help you to troubleshoot MFA NPS Extension Knows issues ****" -ForegroundColor Green
-Write-Host "**** Tool Version is 2.6, Make Sure to Visit MS site to get the latest version ****" -ForegroundColor Green
+Write-Host "**** Tool Version is 2.7, Make Sure to Visit MS site to get the latest version ****" -ForegroundColor Green
 Write-Host "**** Thank you for Using MS Products, Microsoft @2023 ****" -ForegroundColor Green
 Write-Host "*******************************************************************************"
 
@@ -858,37 +858,52 @@ Install_AD_Module
 $Global:Result = (Get-MsolUser -UserPrincipalName $Global:upn).UserPrincipalName  # Will check if the user exist in Azure AD based on the Provided UPN
 $Global:IsSynced = (Get-MsolUser -UserPrincipalName $Global:upn).ImmutableId 
 $Global:StrongAuthMethod = ((Get-MsolUser -UserPrincipalName $Global:upn).StrongAuthenticationMethods).MethodType  # To retrieve the current Strong Auth Method configured
+#$Global:StrongAuthMethod = (Get-MsolUser -UserPrincipalName $Global:upn).StrongAuthenticationMethods  # To retrieve the current Strong Auth Method configured
+
 $Global:DefaultMFAMethod =  ((Get-MsolUser -UserPrincipalName $Global:UPN).StrongAuthenticationMethods | where-object Isdefault -Contains "true").MethodType  # To retrieve the default MFA method
+#$Global:DefaultMFAMethod =  ((Get-MsolUser -UserPrincipalName $Global:UPN).StrongAuthenticationMethods | where-object Isdefault -Contains "true").MethodType  # To retrieve the default MFA method
+
 $Global:UserSignInStatus = (Get-MsolUser -UserPrincipalName $Global:upn).BlockCredential  # Check if the user blocked to sign-in in Azure AD
 $Global:SAMAccountName = (Get-ADUser -Filter "UserPrincipalName -eq '$Global:UPN'").SamAccountName 
 $Global:DialInStatus = Get-ADUser $Global:SAMAccountName -Properties * | select -ExpandProperty msNPAllowDialin 
 $Global:UserStatus = (Get-MsolUser -UserPrincipalName $Global:upn).ValidationStatus  # Check if the user is health in Azure AD
 $Global:UserLastSync = (Get-MsolUser -UserPrincipalName $Global:upn).LastDirSyncTime # Check the last sync time for the user in Azure AD
 $Global:UserAssignedLicense = (Get-MsolUser -UserPrincipalName $Global:upn).Licenses.AccountSkuId  #Check User Assigned license
+$Global:UserAssignedLicense = ($Global:UserAssignedLicense -replace ':',' ')
+$Global:UserAssignedLicense = -split $Global:UserAssignedLicense
+
+# Variable filled in from doc https://learn.microsoft.com/en-us/entra/identity/users/licensing-service-plan-reference
+$Global:UserPlans = "AAD_PREMIUM" , "AAD_PREMIUM_FACULTY" , "AAD_PREMIUM_USGOV_GCCHIGH" , "AAD_PREMIUM_P2" , "EMS_EDU_FACULTY" , "EMS", "EMSPREMIUM" , "EMSPREMIUM_USGOV_GCCHIGH" , "EMS_GOV" , "EMSPREMIUM_GOV" , "MFA_STANDALONE" , "M365EDU_A3_FACULTY" , "M365EDU_A3_STUDENT" , "M365EDU_A3_STUUSEBNFT" , "M365EDU_A3_STUUSEBNFT_RPA1" , "M365EDU_A5_FACULTY" , "M365EDU_A5_STUDENT" , "M365EDU_A5_STUUSEBNFT" , "M365EDU_A5_NOPSTNCONF_STUUSEBNFT" , "SPB" , "SPE_E3" , "SPE_E3_RPA1" , "Microsoft_365_E3" , "SPE_E3_USGOV_DOD" , "SPE_E3_USGOV_GCCHIGH" , "SPE_E5" , "Microsoft_365_E5" , "DEVELOPERPACK_E5" , "SPE_E5_CALLINGMINUTES" , "SPE_E5_NOPSTNCONF" , "Microsoft_365_E5_without_Audio_Conferencing" , "M365_F1" , "SPE_F1" , "M365_F1_COMM" , "SPE_E5_USGOV_GCCHIGH" , "M365_F1_GOV" , "M365_G3_GOV" , "M365_G5_GCC" , "MFA_PREMIUM"
+
+# VALUES OF USER ACCOUNT
+# Write-Host "UserPrincipalName: " $Global:Result
+# Write-Host "Is Synched: " $Global:IsSynced
+# Write-Host "MFA method: " $Global:StrongAuthMethod
+# Write-Host "Default MFA: " $Global:DefaultMFAMethod
+# Write-Host "Sign-In status:" $Global:UserSignInStatus
+# Write-Host "SAMAccountName: " $Global:SAMAccountName
+# Write-Host "DialIn status:" $Global:DialInStatus
+# Write-Host "Azure AD status: " $Global:UserStatus
+# Write-Host "Last Sync Date: " $Global:UserLastSync
+# Write-Host "License SKU: " $Global:UserAssignedLicense
+# Write-Host "Plans: " $Global:UserPlans
 
 
 #$Global:Finishing_Test = Read-Host -Prompt "If no additional tests needed, Type Y and click Enter, This is will remove the AD module which installed at the begening of this test, removing the module require machine restart, if you don't want to remove it OR you need to perform the test again click enter directly "
 
 if($Global:Finishing_Test -eq "Y")
-{
-
-Write-Host "Thanks for Using MS Products, Removing AD module now ..." -ForegroundColor Green 
-
-Remove_AD_Module
-
-}
+    {
+    Write-Host "Thanks for Using MS Products, Removing AD module now ..." -ForegroundColor Green 
+    Remove_AD_Module
+    }
 
 }
-
 
 else
-{
-write-Host "Connection to Azure Failed - Skipped all tests, please make sure to connect to your tenant first with global Admin role ..." -ForegroundColor Red
-
-Break
-
-}
-
+    {
+    write-Host "Connection to Azure Failed - Skipped all tests, please make sure to connect to your tenant first with global Admin role ..." -ForegroundColor Red -BackgroundColor White
+    Break
+    }
 }
 
 
@@ -906,8 +921,6 @@ Function Remove_AD_Module {
         
         {
             Write-Host "Active Directory Module is not installed." -ForegroundColor red -BackgroundColor Black
-    
-            
         }
 
 }
@@ -915,93 +928,73 @@ Function Remove_AD_Module {
 
 Function Test_Results {
 
-#Check if the user is exist in AD, if not the test will be terminated
+#Check if the user exists in AD, if not the test will be terminated
 
 Write-Host 
 Write-Host
 Write-Host "start Running the tests..."
 write-host
 
-Write-Host "Checking if" $Global:UPN "is EXIST in Azure AD ... " -ForegroundColor Yellow
+Write-Host "Checking if" $Global:UPN "EXISTS in Azure AD ... " -ForegroundColor Yellow
 
 if ($Global:Result -eq $Global:UPN) {
 
-Write-Host
+    Write-Host
+    Write-Host "User" $Global:UPN "EXISTS in Azure AD... TEST PASSED" -ForegroundColor Green
+    Write-Host
 
-Write-Host "User" $Global:UPN "is EXIST in Azure AD... TEST PASSED" -ForegroundColor Green
+    }
+    else {
 
-Write-Host
+    Write-Host
+    Write-Host "User" $Global:UPN "NOT EXISTS in Azure AD... TEST FAILED" -ForegroundColor Red
+    Write-Host
+    Write-Host "Test was terminated, Please make sure that the user EXISTS on Azure AD" -ForegroundColor Red -BackgroundColor White
+    Write-Host
+    Break
+    }
 
-} else {
-
-Write-Host
-
-Write-Host "User" $Global:UPN "is NOT EXIST in Azure AD... TEST FAILED" -ForegroundColor Red
-
-Write-Host
-
-Write-Host "Test was terminated, Please make sure that the user is EXIST to Azure AD" -ForegroundColor Red
-
-Write-Host
-
-Break
-
-}
 
 #Check if the user Synced to Azure AD, if Not the test will be terminated
 
-Write-Host "Checking if" $Global:UPN "is SYNED to Azure AD from On-premises AD ... " -ForegroundColor Yellow
-
+Write-Host "Checking if" $Global:UPN "is SYNCHED to Azure AD from On-premises AD ... " -ForegroundColor Yellow
 
 if($Global:IsSynced -ne $null -and $Global:UserLastSync -ne $null) {
 
-Write-Host
+    Write-Host
+    Write-Host "User" $Global:UPN " is SYNCHED to Azure AD ... Test PASSED" -ForegroundColor Green
+    Write-Host
+    }
+    else {
+    
+    Write-Host
+    Write-Host "User" $Global:UPN "is NOT SYNCHED to Azure AD ... Test FAILED" -ForegroundColor Red
+    Write-Host
+    Write-Host "Test was terminated, Please make sure that the user is SYNCHED to Azure AD" -ForegroundColor Red -BackgroundColor White
+    Write-Host
+    Break
+    }
 
-Write-Host "User " $Global:UPN " is SYNCED to Azure AD ... Test PASSED" -ForegroundColor Green
-
-Write-Host
-
-} else {
-
-Write-Host
-
-Write-Host "User" $Global:UPN "is NOT SYNCED to Azure AD ... Test FAILED" -ForegroundColor Red
-
-Write-Host "Test was terminated, Please make sure that the user is SYNCED to Azure AD" -ForegroundColor Red
-
-Write-Host
-
-Break
-
-}
-
-Write-Host "Checking if" $Global:UPN "is BLOCKED to sign in to Azure AD or Not ... " -ForegroundColor Yellow
 
 #Check if the user not blocked from Azure portal to sign in, even the test failed other tests will be performed
 
+Write-Host "Checking if" $Global:UPN "is BLOCKED to sign in to Azure AD or Not ... " -ForegroundColor Yellow
+
 if ($Global:UserSignInStatus -eq $false) {
 
-Write-Host
+    Write-Host
+    Write-Host "User" $Global:UPN "is NOT BLOCKED to sign in to Azure AD ... Test PASSED" -ForegroundColor Green
+    Write-Host
+    }
+    else {
 
-
-Write-Host "User" $Global:UPN "is NOT BLOCKED to sign in to Azure AD ... Test PASSED" -ForegroundColor Green
-
-Write-Host
-
-}
-else {
-
-Write-Host
-
-Write-Host "User" $Global:UPN "is Blocked to sign in to Azure AD ... Test FAILED" -ForegroundColor Red
-
-Write-Host "Refer to: https://docs.microsoft.com/en-us/azure/active-directory/fundamentals/active-directory-users-profile-azure-portal#to-add-or-change-profile-information for more info about this .... Test will continue to detect additional issue(s), Please make sure that the user is allowed to sign in to Azure AD" -ForegroundColor Red
-
-Write-Host
-
-
-
-}
+    Write-Host
+    Write-Host "User" $Global:UPN "is BLOCKED to sign in to Azure AD ... Test FAILED" -ForegroundColor Red
+    Write-Host
+    Write-Host "Refer to: https://learn.microsoft.com/en-us/entra/fundamentals/how-to-manage-user-profile-info#add-or-change-profile-information for more info about this .... "  -ForegroundColor Red -BackgroundColor White
+    Write-Host "Test will continue to detect additional issue(s), Please make sure that the user is allowed to sign in to Azure AD" -ForegroundColor Red -BackgroundColor White
+    Write-Host
+    }
 
 
 #Check if the user is in healthy status in Azure AD, even the test failed other tests will be performed.
@@ -1010,26 +1003,18 @@ Write-Host "Checking if" $Global:UPN "is HEALTHY in Azure AD or Not ..." -Foregr
 
 if ($Global:UserStatus -eq 'healthy') {
 
-Write-Host
+    Write-Host
+    Write-Host "User" $Global:UPN "status is HEALTHY in Azure AD ... Test PASSED" -ForegroundColor Green
+    Write-Host
+    }
+    else {
 
-
-Write-Host "User "$Global:UPN "status is HEALTHY in Azure AD ... Test PASSED" -ForegroundColor Green
-
-Write-Host
-
-} else {
-
-Write-Host
-
-Write-Host "User" $Global:UPN "is NOT HEALTHY in Azure AD ... Test FAILED" -ForegroundColor Red
-
-Write-Host "Test will continue to detect additional issue(s), Please make sure that the user status is HEALTHY in Azure AD" -ForegroundColor Red
-
-Write-Host
-
-
-
-}
+    Write-Host
+    Write-Host "User" $Global:UPN "is NOT HEALTHY in Azure AD ... Test FAILED" -ForegroundColor Red
+    Write-Host
+    Write-Host "Test will continue to detect additional issue(s), Please make sure that the user status is HEALTHY in Azure AD" -ForegroundColor Red -BackgroundColor White
+    Write-Host
+    }
 
 
 #Check if the user have MFA method(s) and there is one default MFA method.
@@ -1038,67 +1023,72 @@ Write-Host "Checking if" $Global:UPN "already completed MFA Proofup in Azure AD 
 
 if ($Global:StrongAuthMethod -eq $null) {
 
+    Write-Host
+    Write-Host "User" $Global:UPN "did NOT Complete the MFA Proofup at all or Admin require the user to provide MFA method again ... Test FAILED" -ForegroundColor Red
+    Write-Host
+    Write-Host "Please refer to https://learn.microsoft.com/en-us/entra/identity/authentication/howto-mfa-getstarted#plan-user-registration for more info ... Test will continue to detect additional issue(s), Please make sure that the user has completed MFA Proofup in Azure AD" -ForegroundColor Red -BackgroundColor White
+    Write-Host
+    }
+    elseif ($Global:DefaultMFAMethod -eq $null ) {
+    
+        Write-Host
+        Write-Host "User" $Global:UPN "may did before the MFA Proofup but the admin require the user to Provide MFA Methods again ... Test FAILED" -ForegroundColor Red
+        Write-Host
+        Write-Host "Test will continue to detect additional issue(s), Please make sure that the user has completed MFA Proofup in Azure AD" -ForegroundColor Red -BackgroundColor White
+        Write-Host
+        }
+        else {
 
-Write-Host
+            Write-Host
+            Write-Host "User" $Global:UPN "Completed MFA Proofup in Azure AD with" $Global:DefaultMFAMethod "as a Default MFA Method ... Test PASSED" -ForegroundColor Green
+            Write-Host
+            }
 
-Write-Host "User" $Global:UPN "did NOT Complete the MFA Proofup at all or Admin require the user to provide MFA method again ... Test FAILED" -ForegroundColor Red
-
-Write-Host "Please refer to https://docs.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-getstarted#get-users-to-enroll for more info ... Test will continue to detect additional issue(s), Please make sure that the user status is HEALTHY in Azure AD" -ForegroundColor Red
-
-Write-Host
-
-} elseif ($Global:DefaultMFAMethod -eq $null ){
-
-
-Write-Host
-
-Write-Host "User" $Global:UPN "may did before the MFA Proofup but the admin require the user to Provide MFA Methods again ... Test FAILED" -ForegroundColor Red
-
-Write-Host "Test will continue to detect additional issue(s), Please make sure that the user status is HEALTHY in Azure AD" -ForegroundColor Red
-
-Write-Host
-
-} else {
-
-Write-Host
-
-
-Write-Host "User" $Global:UPN "Completed MFA Proofup in Azure AD with" $Global:DefaultMFAMethod "as a Default MFA Method ... Test PASSED" -ForegroundColor Green
-
-
-Write-Host
-
-}
-
-
-
+            
 #Check the user assigned licenses, usually even the user don't have direct assigned license the MFA will not fail, so only warning we will throw here if the user have no license assigned
-# refer to this for the plans: https://docs.microsoft.com/en-us/azure/active-directory/users-groups-roles/licensing-service-plan-reference
+# refer to this for the plans: https://learn.microsoft.com/en-us/azure/active-directory/users-groups-roles/licensing-service-plan-reference
 
 
 Write-Host "Checking if" $Global:UPN "has a valid license for MFA ... " -ForegroundColor Yellow
 
-if ($Global:UserAssignedLicense -eq 'AAD_PREMIUM' -or $Global:UserAssignedLicense -eq 'MFA_PREMIUM' -or $Global:UserAssignedLicense -eq 'AAD_PREMIUM_P2' -or $Global:UserAssignedLicense -eq 'EMSPREMIUM' -or $Global:UserAssignedLicense -eq 'EMS') {
+# Check assigned licenses on valid licensing plans
+$IsMFALicenseValid = $false
+$MFALicense = $Global:UserAssignedLicense[1]
 
-Write-Host
-
-Write-Host "User " $Global:UPN "has a valid assigned license ... Test PASSED" -ForegroundColor Green
-
-Write-Host
-
-} else {
-
-Write-Host
-
-Write-Host "User " $Global:UPN "has not a valid license for MFA, it's a warning message to be legal from licensing side... Test FAILED" -ForegroundColor Red
-
-Write-Host "Test will continue to detect additional issue(s), Please make sure to assign a valid MFA License for the user (AD Premium, EMS or MFA standalone license" -ForegroundColor Red
-
-Write-Host
-
-
-
+# If there is no License assigned to user, make it noticed
+if ($MFALicense.Length -eq 0){
+    $MFALicense = "No License Assigned"
 }
+
+For ($i=0; $i -lt $Global:UserAssignedLicense.Count; $i++)
+{
+    For ($k=0; $k -lt $Global:UserPlans.Count; $k++)
+    {
+        # Write-Host $Global:userAssignedLicense[$i] "#" $Global:UserPlans[$k]
+        if ($Global:UserAssignedLicense[$i] -eq $Global:UserPlans[$k]) {
+            $MFALicense = $Global:UserAssignedLicense[$i]
+            $IsMFALicenseValid = $true
+            }
+    }
+}
+
+
+#if ($Global:UserAssignedLicense -eq 'AAD_PREMIUM' -or $Global:UserAssignedLicense -eq 'MFA_PREMIUM' -or $Global:UserAssignedLicense -eq 'AAD_PREMIUM_P2' -or $Global:UserAssignedLicense -eq 'EMSPREMIUM' -or $Global:UserAssignedLicense -eq 'EMS') {
+if ($IsMFALicenseValid) {
+
+    Write-Host
+    Write-Host "User" $Global:UPN "has a valid assigned license (" $MFALicense ") ... Test PASSED" -ForegroundColor Green
+    Write-Host
+    }
+    else {
+
+        Write-Host
+        Write-Host "User" $Global:UPN "has not a valid license for MFA (" $MFALicense "). It's a warning message to be legal from licensing side... Test FAILED" -ForegroundColor Red
+        Write-Host
+        Write-Host "Please, refer to https://learn.microsoft.com/en-us/azure/active-directory/users-groups-roles/licensing-service-plan-reference for more info ... " -ForegroundColor Red -BackgroundColor White
+        Write-Host "Test will continue to detect additional issue(s), Please make sure to assign a valid MFA License for the user (AD Premium, EMS or MFA standalone license)" -ForegroundColor Red -BackgroundColor White
+        Write-Host
+        }
 
 #checking Network Access Permission under Dial-In Tab in AD, for more info refer to https://docs.microsoft.com/en-us/windows-server/networking/technologies/nps/nps-np-access
 
@@ -1110,8 +1100,7 @@ if ($Global:SAMAccountName -ne $null) {
         {
 
         Write-Host
-        Write-Host "User" $Global:UPN "Allowed for Network Access Permission in local AD ... Test PASSED" -ForegroundColor Green
-        Write-Host "Refer to https://docs.microsoft.com/en-us/windows-server/networking/technologies/nps/nps-np-access for more infor about this option" -ForegroundColor Green
+        Write-Host "User" $Global:UPN "allowed for Network Access Permission in local AD ... Test PASSED" -ForegroundColor Green
         Write-Host
         }
 
@@ -1121,7 +1110,8 @@ if ($Global:SAMAccountName -ne $null) {
 
         Write-Host
         Write-Host "User" $Global:UPN "is Denied for Network Access Permission in local AD ... Test Failed" -ForegroundColor Red
-        Write-Host "Refer to https://docs.microsoft.com/en-us/windows-server/networking/technologies/nps/nps-np-access for more infor about this option" -ForegroundColor Red
+        Write-Host
+        Write-Host "Refer to https://learn.microsoft.com/en-us/windows-server/networking/technologies/nps/nps-np-access for more infor about this option" -ForegroundColor Red -BackgroundColor White
         Write-Host
 
         }
@@ -1132,7 +1122,8 @@ if ($Global:SAMAccountName -ne $null) {
         Write-Host
 
         Write-Host "User" $Global:UPN "has No policy Specified in local AD  ... You Need to check the NPS policy if the user is allowed or not" -ForegroundColor Red
-        Write-Host "Refer to https://docs.microsoft.com/en-us/windows-server/networking/technologies/nps/nps-np-access for more infor about this option " -ForegroundColor Red
+        Write-Host
+        Write-Host "Refer to https://learn.microsoft.com/en-us/windows-server/networking/technologies/nps/nps-np-access for more infor about this option " -ForegroundColor Red -BackgroundColor White
         Write-Host
 
         }
@@ -1153,7 +1144,7 @@ Else{
 #All Tests finished
 
         Write-Host
-        Write-Host "Check Completed, please fix any issue run the test again, if no issues found please contact MS support" -ForegroundColor Green
+        Write-Host "Check Completed. Please fix any issue identified and run the test again. If you required further troubleshooting, please contact MS support" -ForegroundColor Green
         Write-Host
 
 }
