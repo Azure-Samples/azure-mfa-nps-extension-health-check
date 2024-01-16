@@ -3,8 +3,8 @@ Clear-Host
 Write-Host "*********************************************************************************"
 Write-Host "**** Welcome to MFA NPS Extension Troubleshooter Tool ****" -ForegroundColor Green
 Write-Host "**** This Tool will help you to troubleshoot MFA NPS Extension Knows issues ****" -ForegroundColor Green
-Write-Host "**** Tool Version is 2.7, Make Sure to Visit MS site to get the latest version ****" -ForegroundColor Green
-Write-Host "**** Thank you for Using MS Products, Microsoft @2023 ****" -ForegroundColor Green
+Write-Host "**** Tool Version is 3.0, Make Sure to Visit MS site to get the latest version ****" -ForegroundColor Green
+Write-Host "**** Thank you for Using MS Products, Microsoft @2024 ****" -ForegroundColor Green
 Write-Host "*******************************************************************************"
 
 Write-Host
@@ -33,7 +33,6 @@ while ( !($Choice_Number -eq '1' -or $Choice_Number -eq '2' -or $Choice_Number -
 $Choice_Number = Read-Host -Prompt "Invalid Option, Based on which test you need to run, please type 1, 2, 3, 4 or E to exit the test. Then click Enter " 
 
 }
-
 
 ##### This Function will be run against against MFA NPS Server ######
 ##### Microsoft 2022 @Ahmad Yasin, Nate Harris (nathar), Will Aftring (wiaftin) ##########
@@ -100,13 +99,28 @@ $IWRADNotification = ""
 $IWRStrongAuthService = ""
 $IWRCredentials = ""
 
+# Install required MG Graph modules
 Write-Host
-write-Host "Start Azure AD connection to be established with Global Admin role ..." -ForegroundColor Green
+write-Host "Ensure Microsoft.Graph module is installed ..." -ForegroundColor Green
 Write-Host
 
-Connect-MsolService
+# Required MG Graph modules
+Install-Module -Name "Microsoft.Graph.Authentication" -ErrorAction Stop
+Install-Module -Name "Microsoft.Graph.Applications" -ErrorAction Stop
+Install-Module -Name "Microsoft.Graph.Users" -ErrorAction Stop
+Install-Module -Name "Microsoft.Graph.Identity.DirectoryManagement" -ErrorAction Stop
+Install-Module -Name "Microsoft.Graph.Identity.SignIns" -ErrorAction Stop
 
-$verifyConnection = Get-MsolDomain -ErrorAction SilentlyContinue
+# Full Microsoft MG Graph library
+# Install-Module -Name "Microsoft.Graph" -verbose -ErrorAction Stop
+
+Write-Host
+write-Host "Start Entra connection to be established with Global Admin role ..." -ForegroundColor Green
+Write-Host
+
+Connect-MgGraph -Scopes Domain.Read.All,Application.Read.All -NoWelcome
+
+$verifyConnection = Get-MgDomain -ErrorAction SilentlyContinue
 
 if($verifyConnection -ne $null)
 {
@@ -442,33 +456,20 @@ write-host
 $AllSPNs = ''
 
 
-$AllSPNs = Get-MsolServicePrincipal -All | select AppPrincipalId 
+$AllSPNs = Get-MgServicePrincipal -All | Select-Object AppId
 
-
-#if the MFA NPS is exist in $AllSPNs then it will check it's status if it's enabled or not, if it's not exist the test will fail directly
+#if the MFA NPS is exist in $AllSPNs then it will check its status if it's enabled or not, if it doesn't exist the test will fail directly
 
 if ($AllSPNs -match "981f26a1-7f43-403b-a875-f8b09b8cd720")
-
 {
             $SPNExist = "True"
-
-            
-            $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if Azure MFA SPN Exists in the tenant';'Result'='Test Passed';'Recommendations' ="N/A";'Notes' = "N/A"}
-
+            $objects += New-Object -Type PSObject -Property @{'Test Name'='Checking if Azure MFA SPN Exists in the tenant';'Result'='Test Passed';'Recommendations' ="N/A";'Notes' = "N/A"}
 
             # Test if the SPN is enabled or Disabled
-            if (((Get-MsolServicePrincipal -AppPrincipalId 981f26a1-7f43-403b-a875-f8b09b8cd720).AccountEnabled -eq "True"))
- 
+            if (((Get-MgServicePrincipal -Filter "appid eq '981f26a1-7f43-403b-a875-f8b09b8cd720'").AccountEnabled -eq $true))
             {
-
-            $SPNEnabled = "True"
-            
-            $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if Azure MFA SPN is Enabled in the tenant';'Result'='Test Passed';'Recommendations' ="N/A";'Notes' = "N/A"}
-
-
-            ###write-Host "SPN is Exist and Enabled - Test Passed" -ForegroundColor Green
-
-
+                $SPNEnabled = "True"
+                $objects += New-Object -Type PSObject -Property @{'Test Name'='Checking if Azure MFA SPN is Enabled in the tenant';'Result'='Test Passed';'Recommendations' ="N/A";'Notes' = "N/A"}
             }
 
             Else
@@ -578,15 +579,15 @@ $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking Other MFA Re
 
 # below section is to check the current cert in Azure and current Cert in local NPS Server
 $TestStepNumber = $TestStepNumber + 1
-write-Host $TestStepNumber "- Checking if there is a valid certificated matched with the Certificates stored in Azure AD ..." -ForegroundColor Yellow
+write-Host $TestStepNumber "- Checking if there is a valid certificated matched with the Certificates stored in Entra ID ..." -ForegroundColor Yellow
 write-host
 
 
-#Count the number of certificate in the cloud for MFA NPS Extension
-$NumberofCert = (Get-MsolServicePrincipalCredential -AppPrincipalId "981f26a1-7f43-403b-a875-f8b09b8cd720" -ReturnKeyValues 1).count
+# Count the number of certificate in the cloud for MFA NPS Extension
+$NumberofCert = (Get-MgServicePrincipal -Filter "appid eq '981f26a1-7f43-403b-a875-f8b09b8cd720'" -Property "KeyCredentials").KeyCredentials.Count
 
-#store all the certificate in this variable;since customer may have more than one certificate and we need to check all of them, then we are storing the values of certs into array.
-$NPSCertValue =  (Get-MsolServicePrincipalCredential -AppPrincipalId "981f26a1-7f43-403b-a875-f8b09b8cd720" -ReturnKeyValues 1).Value
+# Store all the certificate in this variable; since customer may have more than one certificate and we need to check all of them, then we are storing the values of certs into array.
+$NPSCertValue = (Get-MgServicePrincipal -Filter "appid eq '981f26a1-7f43-403b-a875-f8b09b8cd720'" -Property "KeyCredentials").KeyCredentials
 
 # Get local Cert thumbprint from local NPS Server. 
 #$localCert =  (Get-ChildItem((Set-Location cert:\localmachine\my))).Thumbprint
@@ -607,7 +608,7 @@ for ($i=0;$i -lt $NumberofCert-1; $i++) {
 
    $Cert = New-object System.Security.Cryptography.X509Certificates.X509Certificate2
 
-	$Cert.Import([System.Text.Encoding]::UTF8.GetBytes( $NPSCertValue[$i]))
+	$Cert.Import([System.Text.Encoding]::UTF8.GetBytes([System.Convert]::ToBase64String($NPSCertValue[$i].Key)))
 	$TP.Add($Cert.Thumbprint) | Out-Null
     $Validity.Add($cert.NotAfter) | Out-Null
 }
@@ -721,10 +722,10 @@ for ($x=0;$x -lt $MatchedCert.Count ; $x++) {
 #
 }
 else
-{
-write-Host "Connection to Azure Failed - Skipped all tests, please make sure to connect to your tenant first with global Admin role ..." -ForegroundColor Red
-
-}
+    {
+    write-Host "Connection to Entra Failed - Skipped all tests, please make sure to connect to your tenant first with global Admin role ..." -ForegroundColor Red -BackgroundColor White
+    Break
+    }
 
 # Check if tests were done or not
 if ($objects -ne $null)
@@ -786,6 +787,7 @@ Pop-Location
 
 }
 
+Disconnect-MgGraph
 
 }
 
@@ -842,35 +844,55 @@ Function Install_AD_Module {
 
 Function Check_User {
 
- param ([String] $Global:UPN)
+param ([String] $Global:UPN)
 
- Connect-MsolService # To connect to Azure AD
+# Install required MG Graph modules
+Write-Host
+write-Host "Ensure Microsoft.Graph module is installed ..." -ForegroundColor Green
+Write-Host
 
-$Global:verifyConnection = Get-MsolDomain -ErrorAction SilentlyContinue # This will check if the connection successed or Not
+# Required MG Graph modules
+Install-Module -Name "Microsoft.Graph.Authentication" -ErrorAction Stop
+Install-Module -Name "Microsoft.Graph.Applications" -ErrorAction Stop
+Install-Module -Name "Microsoft.Graph.Users" -ErrorAction Stop
+Install-Module -Name "Microsoft.Graph.Identity.DirectoryManagement" -ErrorAction Stop
+Install-Module -Name "Microsoft.Graph.Identity.SignIns" -ErrorAction Stop
+
+# Full Microsoft MG Graph library
+# Install-Module -Name "Microsoft.Graph" -verbose -ErrorAction Stop
+
+
+Write-Host
+write-Host "Start Entra connection to be established with Global Admin role ..." -ForegroundColor Green
+Write-Host
+
+Connect-MgGraph -Scopes Domain.Read.All,User.Read.All,UserAuthenticationMethod.Read.All -NoWelcome
+
+$Global:verifyConnection = Get-MgDomain -ErrorAction SilentlyContinue # This will check if the connection succeeded or not
 
 $Global:DialInStatus ="N/A" # Initial value not null as option 3 in AD will be null value, to avoid conflict
 
 if($Global:verifyConnection -ne $null)
 {
-
 Install_AD_Module
 
-$Global:Result = (Get-MsolUser -UserPrincipalName $Global:upn).UserPrincipalName  # Will check if the user exist in Azure AD based on the Provided UPN
-$Global:IsSynced = (Get-MsolUser -UserPrincipalName $Global:upn).ImmutableId 
-$Global:StrongAuthMethod = ((Get-MsolUser -UserPrincipalName $Global:upn).StrongAuthenticationMethods).MethodType  # To retrieve the current Strong Auth Method configured
-#$Global:StrongAuthMethod = (Get-MsolUser -UserPrincipalName $Global:upn).StrongAuthenticationMethods  # To retrieve the current Strong Auth Method configured
-
-$Global:DefaultMFAMethod =  ((Get-MsolUser -UserPrincipalName $Global:UPN).StrongAuthenticationMethods | where-object Isdefault -Contains "true").MethodType  # To retrieve the default MFA method
-#$Global:DefaultMFAMethod =  ((Get-MsolUser -UserPrincipalName $Global:UPN).StrongAuthenticationMethods | where-object Isdefault -Contains "true").MethodType  # To retrieve the default MFA method
-
-$Global:UserSignInStatus = (Get-MsolUser -UserPrincipalName $Global:upn).BlockCredential  # Check if the user blocked to sign-in in Azure AD
+$Global:Result = (Get-MgUser -Filter "UserPrincipalName eq '$Global:upn'").UserPrincipalName  # Will check if the user exists in Entra ID based on the Provided UPN
+$Global:IsSynced = (Get-MgUser -Filter "UserPrincipalName eq '$Global:upn'" -Property "OnPremisesImmutableId").OnPremisesImmutableId 
+$Global:UserSignInStatus = (Get-MgUser -Filter "UserPrincipalName eq '$Global:upn'" -Property "AccountEnabled").AccountEnabled  # Check if the user is blocked to sign-in in Entra ID
 $Global:SAMAccountName = (Get-ADUser -Filter "UserPrincipalName -eq '$Global:UPN'").SamAccountName 
 $Global:DialInStatus = Get-ADUser $Global:SAMAccountName -Properties * | select -ExpandProperty msNPAllowDialin 
-$Global:UserStatus = (Get-MsolUser -UserPrincipalName $Global:upn).ValidationStatus  # Check if the user is health in Azure AD
-$Global:UserLastSync = (Get-MsolUser -UserPrincipalName $Global:upn).LastDirSyncTime # Check the last sync time for the user in Azure AD
-$Global:UserAssignedLicense = (Get-MsolUser -UserPrincipalName $Global:upn).Licenses.AccountSkuId  #Check User Assigned license
-$Global:UserAssignedLicense = ($Global:UserAssignedLicense -replace ':',' ')
-$Global:UserAssignedLicense = -split $Global:UserAssignedLicense
+$Global:UserSyncErrorCount = (Get-MgUser -Filter "UserPrincipalName eq '$Global:upn'" -Property "OnPremisesProvisioningErrors").OnPremisesProvisioningErrors.Count  # Check if the user is healthy in Entra ID
+$Global:UserLastSync = (Get-MgUser -Filter "UserPrincipalName eq '$Global:upn'" -Property "OnPremisesLastSyncDateTime").OnPremisesLastSyncDateTime # Check the last sync time for the user in Entra ID
+
+# If user doesn't exist on Entra ID, it's not able to get its MFA methods neither its license, returning error. If it does, let's return its MFA and licenses assigned
+if ($Global:Result -eq $Global:UPN){
+    
+    $Global:StrongAuthMethods = Get-MgUserAuthenticationMethod -UserId $Global:upn  # To retrieve the current Strong Auth Methods configured
+    $Global:UserAssignedLicense = (Get-MgUserLicenseDetail -UserId $Global:upn).SkuPartNumber #Check User Assigned license
+    $Global:UserAssignedLicense = ($Global:UserAssignedLicense -replace ':',' ')
+    $Global:UserAssignedLicense = -split $Global:UserAssignedLicense
+    
+}
 
 # Variable filled in from doc https://learn.microsoft.com/en-us/entra/identity/users/licensing-service-plan-reference
 $Global:UserPlans = "AAD_PREMIUM" , "AAD_PREMIUM_FACULTY" , "AAD_PREMIUM_USGOV_GCCHIGH" , "AAD_PREMIUM_P2" , "EMS_EDU_FACULTY" , "EMS", "EMSPREMIUM" , "EMSPREMIUM_USGOV_GCCHIGH" , "EMS_GOV" , "EMSPREMIUM_GOV" , "MFA_STANDALONE" , "M365EDU_A3_FACULTY" , "M365EDU_A3_STUDENT" , "M365EDU_A3_STUUSEBNFT" , "M365EDU_A3_STUUSEBNFT_RPA1" , "M365EDU_A5_FACULTY" , "M365EDU_A5_STUDENT" , "M365EDU_A5_STUUSEBNFT" , "M365EDU_A5_NOPSTNCONF_STUUSEBNFT" , "SPB" , "SPE_E3" , "SPE_E3_RPA1" , "Microsoft_365_E3" , "SPE_E3_USGOV_DOD" , "SPE_E3_USGOV_GCCHIGH" , "SPE_E5" , "Microsoft_365_E5" , "DEVELOPERPACK_E5" , "SPE_E5_CALLINGMINUTES" , "SPE_E5_NOPSTNCONF" , "Microsoft_365_E5_without_Audio_Conferencing" , "M365_F1" , "SPE_F1" , "M365_F1_COMM" , "SPE_E5_USGOV_GCCHIGH" , "M365_F1_GOV" , "M365_G3_GOV" , "M365_G5_GCC" , "MFA_PREMIUM"
@@ -878,16 +900,14 @@ $Global:UserPlans = "AAD_PREMIUM" , "AAD_PREMIUM_FACULTY" , "AAD_PREMIUM_USGOV_G
 # VALUES OF USER ACCOUNT
 # Write-Host "UserPrincipalName: " $Global:Result
 # Write-Host "Is Synched: " $Global:IsSynced
-# Write-Host "MFA method: " $Global:StrongAuthMethod
-# Write-Host "Default MFA: " $Global:DefaultMFAMethod
+# Write-Host "MFA methods: " $Global:StrongAuthMethods | ConvertTo-Json
 # Write-Host "Sign-In status:" $Global:UserSignInStatus
 # Write-Host "SAMAccountName: " $Global:SAMAccountName
 # Write-Host "DialIn status:" $Global:DialInStatus
-# Write-Host "Azure AD status: " $Global:UserStatus
+# Write-Host "User Sync Error Count: " $Global:UserSyncErrorCount
 # Write-Host "Last Sync Date: " $Global:UserLastSync
 # Write-Host "License SKU: " $Global:UserAssignedLicense
 # Write-Host "Plans: " $Global:UserPlans
-
 
 #$Global:Finishing_Test = Read-Host -Prompt "If no additional tests needed, Type Y and click Enter, This is will remove the AD module which installed at the begening of this test, removing the module require machine restart, if you don't want to remove it OR you need to perform the test again click enter directly "
 
@@ -901,9 +921,10 @@ if($Global:Finishing_Test -eq "Y")
 
 else
     {
-    write-Host "Connection to Azure Failed - Skipped all tests, please make sure to connect to your tenant first with global Admin role ..." -ForegroundColor Red -BackgroundColor White
+    write-Host "Connection to Entra Failed - Skipped all tests, please make sure to connect to your tenant first with global Admin role ..." -ForegroundColor Red -BackgroundColor White
     Break
     }
+
 }
 
 
@@ -935,42 +956,42 @@ Write-Host
 Write-Host "start Running the tests..."
 write-host
 
-Write-Host "Checking if" $Global:UPN "EXISTS in Azure AD ... " -ForegroundColor Yellow
+Write-Host "Checking if" $Global:UPN "EXISTS in Entra ID ... " -ForegroundColor Yellow
 
 if ($Global:Result -eq $Global:UPN) {
 
     Write-Host
-    Write-Host "User" $Global:UPN "EXISTS in Azure AD... TEST PASSED" -ForegroundColor Green
+    Write-Host "User" $Global:UPN "EXISTS in Entra ID... TEST PASSED" -ForegroundColor Green
     Write-Host
 
     }
     else {
 
     Write-Host
-    Write-Host "User" $Global:UPN "NOT EXISTS in Azure AD... TEST FAILED" -ForegroundColor Red
+    Write-Host "User" $Global:UPN "NOT EXISTS in Entra ID... TEST FAILED" -ForegroundColor Red
     Write-Host
-    Write-Host "Test was terminated, Please make sure that the user EXISTS on Azure AD" -ForegroundColor Red -BackgroundColor White
+    Write-Host "Test was terminated, Please make sure that the user EXISTS on Entra ID" -ForegroundColor Red -BackgroundColor White
     Write-Host
     Break
     }
 
 
-#Check if the user Synced to Azure AD, if Not the test will be terminated
+#Check if the user Synced to Entra ID, if Not the test will be terminated
 
-Write-Host "Checking if" $Global:UPN "is SYNCHED to Azure AD from On-premises AD ... " -ForegroundColor Yellow
+Write-Host "Checking if" $Global:UPN "is SYNCHED to Entra ID from On-premises AD ... " -ForegroundColor Yellow
 
 if($Global:IsSynced -ne $null -and $Global:UserLastSync -ne $null) {
 
     Write-Host
-    Write-Host "User" $Global:UPN " is SYNCHED to Azure AD ... Test PASSED" -ForegroundColor Green
+    Write-Host "User" $Global:UPN " is SYNCHED to Entra ID ... Test PASSED" -ForegroundColor Green
     Write-Host
     }
     else {
     
     Write-Host
-    Write-Host "User" $Global:UPN "is NOT SYNCHED to Azure AD ... Test FAILED" -ForegroundColor Red
+    Write-Host "User" $Global:UPN "is NOT SYNCHED to Entra ID ... Test FAILED" -ForegroundColor Red
     Write-Host
-    Write-Host "Test was terminated, Please make sure that the user is SYNCHED to Azure AD" -ForegroundColor Red -BackgroundColor White
+    Write-Host "Test was terminated, Please make sure that the user is SYNCHED to Entra ID" -ForegroundColor Red -BackgroundColor White
     Write-Host
     Break
     }
@@ -978,71 +999,73 @@ if($Global:IsSynced -ne $null -and $Global:UserLastSync -ne $null) {
 
 #Check if the user not blocked from Azure portal to sign in, even the test failed other tests will be performed
 
-Write-Host "Checking if" $Global:UPN "is BLOCKED to sign in to Azure AD or Not ... " -ForegroundColor Yellow
+Write-Host "Checking if" $Global:UPN "is BLOCKED to sign in to Entra ID or Not ... " -ForegroundColor Yellow
 
-if ($Global:UserSignInStatus -eq $false) {
+if ($Global:UserSignInStatus -eq $true) {
 
     Write-Host
-    Write-Host "User" $Global:UPN "is NOT BLOCKED to sign in to Azure AD ... Test PASSED" -ForegroundColor Green
+    Write-Host "User" $Global:UPN "is NOT BLOCKED to sign in to Entra ID ... Test PASSED" -ForegroundColor Green
     Write-Host
     }
     else {
 
     Write-Host
-    Write-Host "User" $Global:UPN "is BLOCKED to sign in to Azure AD ... Test FAILED" -ForegroundColor Red
+    Write-Host "User" $Global:UPN "is BLOCKED to sign in to Entra ID ... Test FAILED" -ForegroundColor Red
     Write-Host
     Write-Host "Refer to: https://learn.microsoft.com/en-us/entra/fundamentals/how-to-manage-user-profile-info#add-or-change-profile-information for more info about this .... "  -ForegroundColor Red -BackgroundColor White
-    Write-Host "Test will continue to detect additional issue(s), Please make sure that the user is allowed to sign in to Azure AD" -ForegroundColor Red -BackgroundColor White
+    Write-Host "Test will continue to detect additional issue(s), Please make sure that the user is allowed to sign in to Entra ID" -ForegroundColor Red -BackgroundColor White
     Write-Host
     }
 
 
-#Check if the user is in healthy status in Azure AD, even the test failed other tests will be performed.
+#Check if the user is in healthy status in Entra ID, even the test failed other tests will be performed.
 
-Write-Host "Checking if" $Global:UPN "is HEALTHY in Azure AD or Not ..." -ForegroundColor Yellow
+Write-Host "Checking if" $Global:UPN "is HEALTHY in Entra ID or Not ..." -ForegroundColor Yellow
 
-if ($Global:UserStatus -eq 'healthy') {
+if ($Global:UserSyncErrorCount -eq 0) {
 
     Write-Host
-    Write-Host "User" $Global:UPN "status is HEALTHY in Azure AD ... Test PASSED" -ForegroundColor Green
+    Write-Host "User" $Global:UPN "status is HEALTHY in Entra ID ... Test PASSED" -ForegroundColor Green
     Write-Host
     }
     else {
 
     Write-Host
-    Write-Host "User" $Global:UPN "is NOT HEALTHY in Azure AD ... Test FAILED" -ForegroundColor Red
+    Write-Host "User" $Global:UPN "is NOT HEALTHY in Entra ID ... Test FAILED" -ForegroundColor Red
     Write-Host
-    Write-Host "Test will continue to detect additional issue(s), Please make sure that the user status is HEALTHY in Azure AD" -ForegroundColor Red -BackgroundColor White
+    Write-Host "Test will continue to detect additional issue(s), Please make sure that the user status is HEALTHY in Entra ID" -ForegroundColor Red -BackgroundColor White
     Write-Host
     }
 
 
 #Check if the user have MFA method(s) and there is one default MFA method.
 
-Write-Host "Checking if" $Global:UPN "already completed MFA Proofup in Azure AD or Not ... " -ForegroundColor Yellow
+Write-Host "Checking if" $Global:UPN "already completed MFA Proofup in Entra ID or Not ... " -ForegroundColor Yellow
 
-if ($Global:StrongAuthMethod -eq $null) {
+$Global:HasMfaMethod = $false
+
+foreach($method in $Global:StrongAuthMethods)
+{
+	if ($method.AdditionalProperties["@odata.type"].Contains("phoneAuthenticationMethod") -or $method.AdditionalProperties["@odata.type"].Contains("microsoftAuthenticatorAuthenticationMethod"))
+	{
+		$Global:HasMfaMethod = $true
+	}
+}
+
+if ($Global:HasMfaMethod -eq $false) {
 
     Write-Host
     Write-Host "User" $Global:UPN "did NOT Complete the MFA Proofup at all or Admin require the user to provide MFA method again ... Test FAILED" -ForegroundColor Red
     Write-Host
-    Write-Host "Please refer to https://learn.microsoft.com/en-us/entra/identity/authentication/howto-mfa-getstarted#plan-user-registration for more info ... Test will continue to detect additional issue(s), Please make sure that the user has completed MFA Proofup in Azure AD" -ForegroundColor Red -BackgroundColor White
+    Write-Host "Please refer to https://learn.microsoft.com/en-us/entra/identity/authentication/howto-mfa-getstarted#plan-user-registration for more info ... Test will continue to detect additional issue(s), Please make sure that the user has completed MFA Proofup in Entra ID" -ForegroundColor Red -BackgroundColor White
     Write-Host
-    }
-    elseif ($Global:DefaultMFAMethod -eq $null ) {
-    
-        Write-Host
-        Write-Host "User" $Global:UPN "may did before the MFA Proofup but the admin require the user to Provide MFA Methods again ... Test FAILED" -ForegroundColor Red
-        Write-Host
-        Write-Host "Test will continue to detect additional issue(s), Please make sure that the user has completed MFA Proofup in Azure AD" -ForegroundColor Red -BackgroundColor White
-        Write-Host
-        }
-        else {
+}
+else {
 
-            Write-Host
-            Write-Host "User" $Global:UPN "Completed MFA Proofup in Azure AD with" $Global:DefaultMFAMethod "as a Default MFA Method ... Test PASSED" -ForegroundColor Green
-            Write-Host
-            }
+	Write-Host
+	Write-Host "User" $Global:UPN "Completed MFA Proofup in Entra ID with" $Global:DefaultMFAMethod "as a Default MFA Method ... Test PASSED" -ForegroundColor Green
+	Write-Host
+}
 
             
 #Check the user assigned licenses, usually even the user don't have direct assigned license the MFA will not fail, so only warning we will throw here if the user have no license assigned
@@ -1053,7 +1076,7 @@ Write-Host "Checking if" $Global:UPN "has a valid license for MFA ... " -Foregro
 
 # Check assigned licenses on valid licensing plans
 $IsMFALicenseValid = $false
-$MFALicense = $Global:UserAssignedLicense[1]
+$MFALicense = $Global:UserAssignedLicense[0]
 
 # If there is no License assigned to user, make it noticed
 if ($MFALicense.Length -eq 0){
@@ -1073,7 +1096,6 @@ For ($i=0; $i -lt $Global:UserAssignedLicense.Count; $i++)
 }
 
 
-#if ($Global:UserAssignedLicense -eq 'AAD_PREMIUM' -or $Global:UserAssignedLicense -eq 'MFA_PREMIUM' -or $Global:UserAssignedLicense -eq 'AAD_PREMIUM_P2' -or $Global:UserAssignedLicense -eq 'EMSPREMIUM' -or $Global:UserAssignedLicense -eq 'EMS') {
 if ($IsMFALicenseValid) {
 
     Write-Host
@@ -1149,13 +1171,11 @@ Else{
 
 }
 
-
-
-
-
 Check_User ($Global:UPN)
 
 Test_Results
+
+Disconnect-MgGraph
 
 }
 
@@ -1183,7 +1203,7 @@ if (-not (Test-Path -LiteralPath $DirectoryToCreate)) {
 else {
     "Directory '$DirectoryToCreate' already existed"
 }
-Remove-Item "c:\nps\*.txt", "c:\nps\*.evtx", "c:\nps\*.etl","c:\nps\*.log", "c:\nps\*.cab"
+Remove-Item "c:\nps\*.txt", "c:\nps\*.evtx", "c:\nps\*.etl","c:\nps\*.log", "c:\nps\*.cab", "c:\nps\*.zip", "c:\nps\*.reg"
 
 netsh trace start capture=yes overwrite=yes  tracefile=C:\NPS\nettrace.etl
 REG QUERY "HKLM\SOFTWARE\Microsoft\AzureMfa" > C:\NPS\BeforeRegAdd_AzureMFA.txt
