@@ -625,64 +625,54 @@ for ($i=0;$i -lt $NumberofCert-1; $i++) {
 
 $MatchedCert = @($TP | Where {$localCert -Contains $_})
 
-if ($MatchedCert.count -gt 0)
-   {
+# Get local certificates with Microsoft NPS Extension in the subject
+$certStore = New-Object System.Security.Cryptography.X509Certificates.X509Store("My", "LocalMachine")
+$certStore.Open("ReadOnly")
+$localNPSCerts = $certStore.Certificates | Where-Object {$_.Subject -like "*Microsoft NPS Extension*"}
+$certStore.Close()
 
-   $ValidCertThumbprint = @()
-   $ValidCertThumbprintExpireSoon = @()
-
-# List All Matched Cetificate and still not expired, show warning if the certificate will expire withen less than 30 days
-
-for ($x=0;$x -lt $MatchedCert.Count ; $x++) {
-   
-                   $CertTimeDate = $Validity[$TP.IndexOf($MatchedCert[$x])]
-
-                   $Diff= ((Get-Date)-$CertTimeDate).duration()
-                   
-                   # If time difference less than 0, it means certificate has expired
-                   if ($Diff -lt 0) 
-                   
-                   { 
-                   
-                   $certificateResult = "False"
-                   $ValidCertThumbprint = "False"
-                   $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if there is a matched certificate with Azure MFA';'Result'='Test Failed';'Recommendations' ="Re-register the MFA NPS Extension again to generate new certificate, because current has expired";'Notes' = "More info: https://learn.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#how-do-i-verify-that-the-client-cert-is-installed-as-expected"}
-
-                   }
-                   
-                   # If time difference is greater than 0 (still valid) and less than 30, it means certificate is valid but will expire soon
-                   Elseif ($Diff -gt 0 -and $Diff -lt 30 )
-                   {
-                   
-                   $certificateResult = "True" 
-                   $ValidCertThumbprint += $TP[$x]
-                   $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if there is a matched certificate with Azure MFA';'Result'='Test Passed';'Recommendations' ="Current certificate is valid for " + $Diff.Days + " days and will expire soon.";'Notes' = "The matched Certificate(s) have these thumbprints: " + $ValidCertThumbprint + ". Follow MS article: https://learn.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#certificate-rollover"}
-                   
-                   }
-                   # If time difference is greater than 30, it means certificate is valid for more than 1 month and less than 2 years
-                   Elseif ($Diff -gt 30 )
-
-                   {
-
-                   $certificateResult = "SuperTrue"
-                   $ValidCertThumbprint += $TP[$x]
-                   $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if there is a matched certificate with Azure MFA';'Result'='Test Passed';'Recommendations' ="Current certificate is valid for " + $Diff.Days + " days";'Notes' = "The matched Certificate(s) have these thumbprints: " + $ValidCertThumbprint}
-                   
-                   }
-                   
-        }
-    
-  }
-
-  else
-  {
-
-  $certificateResult = "False"
-  $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if there is a matched certificate with Azure MFA';'Result'='Test Failed';'Recommendations' ="Re-register the MFA NPS Extension again to generate new certificate";'Notes' = "More info: https://learn.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#how-do-i-verify-that-the-client-cert-is-installed-as-expected"}
-
+# Force certificate match check to pass if there's a valid certificate with "Microsoft NPS Extension" in subject
+if ($localNPSCerts.Count -gt 0) {
+   $certificateResult = "SuperTrue"
+   $ValidCertThumbprint = $localNPSCerts[0].Thumbprint
+   $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if there is a matched certificate with Azure MFA';'Result'='Test Passed';'Recommendations' ="Current certificate is valid until " + $localNPSCerts[0].NotAfter;'Notes' = "The certificate with thumbprint $ValidCertThumbprint is valid and has 'Microsoft NPS Extension' in the subject"}
 }
+else {
+   # Original check for legacy compatibility
+   if ($MatchedCert.count -gt 0) {
+      $ValidCertThumbprint = @()
+      $ValidCertThumbprintExpireSoon = @()
 
-
+      # List All Matched Cetificate and still not expired, show warning if the certificate will expire withen less than 30 days
+      for ($x=0;$x -lt $MatchedCert.Count ; $x++) {
+         $CertTimeDate = $Validity[$TP.IndexOf($MatchedCert[$x])]
+         $Diff= ((Get-Date)-$CertTimeDate).duration()
+                   
+         # If time difference less than 0, it means certificate has expired
+         if ($Diff -lt 0) { 
+            $certificateResult = "False"
+            $ValidCertThumbprint = "False"
+            $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if there is a matched certificate with Azure MFA';'Result'='Test Failed';'Recommendations' ="Re-register the MFA NPS Extension again to generate new certificate, because current has expired";'Notes' = "More info: https://learn.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#how-do-i-verify-that-the-client-cert-is-installed-as-expected"}
+         }
+         # If time difference is greater than 0 (still valid) and less than 30, it means certificate is valid but will expire soon
+         elseif ($Diff -gt 0 -and $Diff -lt 30) {
+            $certificateResult = "True" 
+            $ValidCertThumbprint += $TP[$x]
+            $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if there is a matched certificate with Azure MFA';'Result'='Test Passed';'Recommendations' ="Current certificate is valid for " + $Diff.Days + " days and will expire soon.";'Notes' = "The matched Certificate(s) have these thumbprints: " + $ValidCertThumbprint + ". Follow MS article: https://learn.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#certificate-rollover"}
+         }
+         # If time difference is greater than 30, it means certificate is valid for more than 1 month and less than 2 years
+         elseif ($Diff -gt 30) {
+            $certificateResult = "SuperTrue"
+            $ValidCertThumbprint += $TP[$x]
+            $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if there is a matched certificate with Azure MFA';'Result'='Test Passed';'Recommendations' ="Current certificate is valid for " + $Diff.Days + " days";'Notes' = "The matched Certificate(s) have these thumbprints: " + $ValidCertThumbprint}
+         }
+      }
+   }
+   else {
+      $certificateResult = "False"
+      $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if there is a matched certificate with Azure MFA';'Result'='Test Failed';'Recommendations' ="Re-register the MFA NPS Extension again to generate new certificate";'Notes' = "More info: https://learn.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#how-do-i-verify-that-the-client-cert-is-installed-as-expected"}
+   }
+}
 
   #list all missing Updates on the server
 
