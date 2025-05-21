@@ -3,8 +3,8 @@ Clear-Host
 Write-Host "*********************************************************************************"
 Write-Host "**** Welcome to MFA NPS Extension Troubleshooter Tool ****" -ForegroundColor Green
 Write-Host "**** This Tool will help you to troubleshoot MFA NPS Extension Knows issues ****" -ForegroundColor Green
-Write-Host "**** Tool Version is 3.0, Make Sure to Visit MS site to get the latest version ****" -ForegroundColor Green
-Write-Host "**** Thank you for Using MS Products, Microsoft @2024 ****" -ForegroundColor Green
+Write-Host "**** Tool Version is 3.5, Make Sure to Visit MS site to get the latest version ****" -ForegroundColor Green
+Write-Host "**** Thank you for Using MS Products, Microsoft @2025 ****" -ForegroundColor Green
 Write-Host "*******************************************************************************"
 
 Write-Host
@@ -42,7 +42,7 @@ Function Check_Nps_Server_Module {
 # Decide which cloud environment to be checked
 Write-Host
 Write-Host
-Write-Host " Please Choose one of the cloud environments (Azure Commercial / Azure Government / Microsoft Azure operated by 21Vianet) below: " -ForegroundColor Yellow
+Write-Host " Please choose one of the cloud environments (Azure Commercial / Azure Government / Microsoft Azure operated by 21Vianet) to evaluate endpoint connectivity: " -ForegroundColor Yellow
 Write-Host
 Write-Host " (1) Azure Commercial " -ForegroundColor Green
 Write-Host
@@ -59,12 +59,57 @@ $Choice_Number = Read-Host -Prompt "Based on which cloud environment you need to
 while ( !($Choice_Number -eq '1' -or $Choice_Number -eq '2' -or $Choice_Number -eq '3' -or $Choice_Number -eq 'E'))
 {
 
-$Choice_Number = Read-Host -Prompt "Invalid Option, Based on which cloud environment you need to evaluate, please type 1, 2, 3 or E to exit the test. Then click Enter " 
+$Choice_Number = Read-Host -Prompt "Invalid Option, Based on which cloud environment you need to evaluate endpoint connectivity, please type 1, 2, 3 or E to exit the test. Then click Enter " 
 
 }
 
 if ($Choice_Number -eq 'E') { Break}
 
+# Select cloud environment where GA admin account will sign-in
+Write-Host
+Write-Host
+Write-Host "Please choose the cloud environment where your Global Administrator account will sign-in: " -ForegroundColor Yellow
+Write-Host
+Write-Host " (C) Azure Commercial " -ForegroundColor Green
+Write-Host
+Write-Host " (G) Azure Government " -ForegroundColor Green
+Write-Host
+Write-Host " (V) Microsoft Azure operated by 21Vianet " -ForegroundColor Green
+Write-Host
+Write-Host " (E) EXIT SCRIPT " -ForegroundColor Red -BackgroundColor White
+Write-Host
+
+$Cloud_Choice_Number =''
+$Cloud_Choice_Number = Read-Host -Prompt "Based on which cloud environment you need to evaluate, please type C, G, V or E to exit the test. Then click Enter "
+
+while ( !($Cloud_Choice_Number -eq 'C' -or $Cloud_Choice_Number -eq 'G' -or $Cloud_Choice_Number -eq 'V' -or $Cloud_Choice_Number -eq 'E'))
+{
+
+$Cloud_Choice_Number = Read-Host -Prompt "Invalid Option, Based on which cloud environment your GA account wants to sign-in, please type C, G, V or E to exit the test. Then click Enter "
+
+}
+
+if ($Cloud_Choice_Number -eq 'E') { Break}
+
+if ($Cloud_Choice_Number -eq 'C') { 
+    
+    Connect-MgGraph -Scopes Domain.Read.All,Application.Read.All -NoWelcome -Environment Global
+
+ }
+
+if ($Cloud_Choice_Number -eq 'G') { 
+
+    Connect-MgGraph -Scopes Domain.Read.All,Application.Read.All -NoWelcome -Environment USGov
+
+ }
+
+if ($Cloud_Choice_Number -eq 'V') { 
+
+    Connect-MgGraph -Scopes Domain.Read.All,Application.Read.All -NoWelcome -Environment China
+
+ }
+
+# Variables 
 $TestStepNumber = 0
 $ErrorActionPreference= 'silentlycontinue'
 $loginAccessResult = 'NA'
@@ -99,26 +144,13 @@ $IWRADNotification = ""
 $IWRStrongAuthService = ""
 $IWRCredentials = ""
 
-# Install required MG Graph modules
-Write-Host
-write-Host "Ensure Microsoft.Graph module is installed ..." -ForegroundColor Green
-Write-Host
 
-# Required MG Graph modules
-Install-Module -Name "Microsoft.Graph.Authentication" -ErrorAction Stop
-Install-Module -Name "Microsoft.Graph.Applications" -ErrorAction Stop
-Install-Module -Name "Microsoft.Graph.Users" -ErrorAction Stop
-Install-Module -Name "Microsoft.Graph.Identity.DirectoryManagement" -ErrorAction Stop
-Install-Module -Name "Microsoft.Graph.Identity.SignIns" -ErrorAction Stop
+# Required script modules
+Manage_Script_Libraries
 
-# Full Microsoft MG Graph library
-# Install-Module -Name "Microsoft.Graph" -verbose -ErrorAction Stop
-
+# Connect with Entra ID using GA user account
 Write-Host
 write-Host "Start Entra connection to be established with Global Admin role ..." -ForegroundColor Green
-Write-Host
-
-Connect-MgGraph -Scopes Domain.Read.All,Application.Read.All -NoWelcome
 
 $verifyConnection = Get-MgDomain -ErrorAction SilentlyContinue
 
@@ -362,37 +394,29 @@ Write-Host
 $MFAVersion = Get-WmiObject Win32_Product -Filter "Name like 'NPS Extension For Azure MFA'" | Select-Object -ExpandProperty Version
 
 # Get the latest version of MFA NPS Extension
-
-## OLD METHOD TO RETRIEVE UPDATED MFA NPS ESTENSION
-#$latestMFAVersion = (((Invoke-WebRequest -Uri 'https://www.microsoft.com/en-us/download/details.aspx?id=54688').ParsedHtml.getElementsByTagName('div') | Where-Object { $_.classname -eq 'fileinfo' }).textContent).Split(':')[1] -replace "[^0-9.]",''
-
 $MFADownloadPage = Invoke-WebRequest -Uri 'https://www.microsoft.com/en-us/download/details.aspx?id=54688'
 $MFADownloadPageHTML = $MFADownloadPage.RawContent
-#$MFADownloadPageHTMLSplit = ($MFADownloadPageHTML -split '<h3 class="h6">Version:</h3><p style="overflow-wrap:break-word">',2)[1]
 $MFADownloadPageHTMLSplit = ($MFADownloadPageHTML -split '"version":"',2)[1]
-#$latestMFAVersion = ($MFADownloadPageHTMLSplit -split '</p></div><div',2)[0]
 $latestMFAVersion = ($MFADownloadPageHTMLSplit -split '","datePublished":',2)[0]
 
-#write-Host $MFADownloadPageHTML
-#write-Host
-#write-Host " # # # # # "
-#write-Host $MFADownloadPageHTMLSplit
-#write-Host
-#write-Host " # # # # # "
-#Write-Host $MFAVersion " # " $latestMFAVersion
+# Evaluate Download Page content
+# write-Host $MFADownloadPage
+# write-Host " # # # # # "
+# write-Host $MFADownloadPageHTML
+# write-Host
+# write-Host " # # # # # "
+# write-Host $MFADownloadPageHTMLSplit
+# write-Host
+# Write-Host $MFAVersion " # " $latestMFAVersion
 
 # Compare if the current version match the latest version
-
 if ($latestMFAVersion -le $MFAVersion)
 {
 
 # Display the Current MFA NPS version and mention it's latest one
-
 $MFATestVersion = "True"
 
 $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if the current installed MFA NPS Extension Version is the latest';'Result'='Test Passed';'Recommendations' ="N/A";'Notes' = "The current installed version is the latest which is: " + $latestMFAVersion }
-
-### write-Host "Current MFA NPS Version is:"  $MFAVersion "; it's the latest one !" -ForegroundColor Green
 
 }
 
@@ -401,16 +425,11 @@ Else
 {
 
 # Display the Current MFA NPS version and mention it's Not the latest one, Advise to upgrade
-
-### write-Host "Current MFA NPS Version is:"  $MFAVersion "; but it's NOT the latest one, we recommend to upgrade it" -ForegroundColor Yellow
-
 $MFATestVersion = "False"
 
 $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if the current installed MFA NPS Extension Version is the latest';'Result'='Test Failed';'Recommendations' ="Make sure to upgrade to the latest version: " + $latestMFAVersion ;'Notes' = "Current installed MFA Version is: " + $MFAVersion}
 
-
 }
-
 
 
 # Check if the NPS Service is Running or not
@@ -601,9 +620,8 @@ $TP = New-Object System.Collections.ArrayList
 # will be used to store the validity period of the Certs
 $Validity = New-Object System.Collections.ArrayList
 
-
 # Get the thumbprint for all Certificates in the cloud.
-for ($i=0;$i -lt $NumberofCert-1; $i++) {
+for ($i=0;$i -lt $NumberofCert; $i++) {
 	
 
    $Cert = New-object System.Security.Cryptography.X509Certificates.X509Certificate2
@@ -612,7 +630,6 @@ for ($i=0;$i -lt $NumberofCert-1; $i++) {
 	$TP.Add($Cert.Thumbprint) | Out-Null
     $Validity.Add($cert.NotAfter) | Out-Null
 }
-
 
 
 # It will compare the thumbprint with the one's on the server, it will stop if one of the certificates were matched and still in it's validity period. All matched 
@@ -655,7 +672,7 @@ for ($x=0;$x -lt $MatchedCert.Count ; $x++) {
                    {
                    
                    $certificateResult = "True" 
-                   $ValidCertThumbprint += $TP[$x]
+                   $ValidCertThumbprint = $TP[$x]
                    $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if there is a matched certificate with Azure MFA';'Result'='Test Passed';'Recommendations' ="Current certificate is valid for " + $Diff.Days + " days and will expire soon.";'Notes' = "The matched Certificate(s) have these thumbprints: " + $ValidCertThumbprint + ". Follow MS article: https://learn.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-nps-extension#certificate-rollover"}
                    
                    }
@@ -665,7 +682,7 @@ for ($x=0;$x -lt $MatchedCert.Count ; $x++) {
                    {
 
                    $certificateResult = "SuperTrue"
-                   $ValidCertThumbprint += $TP[$x]
+                   $ValidCertThumbprint = $TP[$x]
                    $objects += New-Object -Type PSObject -Prop @{'Test Name'='Checking if there is a matched certificate with Azure MFA';'Result'='Test Passed';'Recommendations' ="Current certificate is valid for " + $Diff.Days + " days";'Notes' = "The matched Certificate(s) have these thumbprints: " + $ValidCertThumbprint}
                    
                    }
@@ -846,27 +863,59 @@ Function Check_User {
 
 param ([String] $Global:UPN)
 
-# Install required MG Graph modules
+# Select cloud environment where GA admin account will sign-in
 Write-Host
-write-Host "Ensure Microsoft.Graph module is installed ..." -ForegroundColor Green
+Write-Host
+Write-Host "Please choose the cloud environment where your Global Administrator account will sign-in: " -ForegroundColor Yellow
+Write-Host
+Write-Host " (C) Azure Commercial " -ForegroundColor Green
+Write-Host
+Write-Host " (G) Azure Government " -ForegroundColor Green
+Write-Host
+Write-Host " (V) Microsoft Azure operated by 21Vianet " -ForegroundColor Green
+Write-Host
+Write-Host " (E) EXIT SCRIPT " -ForegroundColor Red -BackgroundColor White
 Write-Host
 
-# Required MG Graph modules
-Install-Module -Name "Microsoft.Graph.Authentication" -ErrorAction Stop
-Install-Module -Name "Microsoft.Graph.Applications" -ErrorAction Stop
-Install-Module -Name "Microsoft.Graph.Users" -ErrorAction Stop
-Install-Module -Name "Microsoft.Graph.Identity.DirectoryManagement" -ErrorAction Stop
-Install-Module -Name "Microsoft.Graph.Identity.SignIns" -ErrorAction Stop
+$Cloud_Choice_Number =''
+$Cloud_Choice_Number = Read-Host -Prompt "Based on which cloud environment you need to evaluate, please type C, G, V or E to exit the test. Then click Enter "
 
-# Full Microsoft MG Graph library
-# Install-Module -Name "Microsoft.Graph" -verbose -ErrorAction Stop
+while ( !($Cloud_Choice_Number -eq 'C' -or $Cloud_Choice_Number -eq 'G' -or $Cloud_Choice_Number -eq 'V' -or $Cloud_Choice_Number -eq 'E'))
+{
 
+$Cloud_Choice_Number = Read-Host -Prompt "Invalid Option, Based on which cloud environment your GA account wants to sign-in, please type C, G, V or E to exit the test. Then click Enter "
+
+}
+
+if ($Cloud_Choice_Number -eq 'E') { Break}
+
+if ($Cloud_Choice_Number -eq 'C') { 
+    
+    Connect-MgGraph -Scopes Domain.Read.All,User.Read.All,UserAuthenticationMethod.Read.All -NoWelcome -Environment Global
+
+ }
+
+if ($Cloud_Choice_Number -eq 'G') { 
+
+    Connect-MgGraph -Scopes Domain.Read.All,User.Read.All,UserAuthenticationMethod.Read.All -NoWelcome -Environment USGov
+
+ }
+
+if ($Cloud_Choice_Number -eq 'V') { 
+
+    Connect-MgGraph -Scopes Domain.Read.All,User.Read.All,UserAuthenticationMethod.Read.All -NoWelcome -Environment China
+
+ }
+
+# Required script modules
+Manage_Script_Libraries
+
+
+# Connect with Entra ID using GA user account
 
 Write-Host
 write-Host "Start Entra connection to be established with Global Admin role ..." -ForegroundColor Green
 Write-Host
-
-Connect-MgGraph -Scopes Domain.Read.All,User.Read.All,UserAuthenticationMethod.Read.All -NoWelcome
 
 $Global:verifyConnection = Get-MgDomain -ErrorAction SilentlyContinue # This will check if the connection succeeded or not
 
@@ -1143,7 +1192,7 @@ if ($Global:SAMAccountName -ne $null) {
 
         Write-Host
 
-        Write-Host "User" $Global:UPN "has No policy Specified in local AD  ... You Need to check the NPS policy if the user is allowed or not" -ForegroundColor Red
+        Write-Host "User" $Global:UPN "local AD Dial-In property is unchecked. This may result in denial, depending on the NPS policy. You need to check the NPS policy if the user is allowed or not." -ForegroundColor Red
         Write-Host
         Write-Host "Refer to https://learn.microsoft.com/en-us/windows-server/networking/technologies/nps/nps-np-access for more infor about this option " -ForegroundColor Red -BackgroundColor White
         Write-Host
@@ -1339,8 +1388,124 @@ Break
 
 }
 
+##### This function evaluates the need to install MS Graph libraries #####
+##### Microsoft 2024 @Miguel Ferreira #####
 
-if ($Choice_Number -eq 'E') { Break}
+Function Manage_Script_Libraries
+{
+# Install required MG Graph modules
+Write-Host
+write-Host "Ensure Microsoft.Graph module is installed ..." -ForegroundColor Green
+Write-Host
+
+# Required MG Graph modules
+$moduleName = "Microsoft.Graph.Authentication"
+if (Get-Module -ListAvailable -Name $moduleName){
+    Write-Host $moduleName "module available" -ForegroundColor Cyan
+    }
+else
+    {
+    Write-Host "Installing" $moduleName "module ..." -ForegroundColor Yellow
+    Install-Module -Name $moduleName -ErrorAction Stop
+    }
+
+$moduleName = "Microsoft.Graph.Applications"
+if (Get-Module -ListAvailable -Name $moduleName){
+    Write-Host $moduleName "module available" -ForegroundColor Cyan
+    Import-Module -Name $moduleName
+    }
+else
+    {
+    Write-Host "Installing" $moduleName "module ..." -ForegroundColor Yellow
+    Install-Module -Name $moduleName -ErrorAction Stop
+    }
+
+$moduleName = "Microsoft.Graph.Users"
+if (Get-Module -ListAvailable -Name $moduleName){
+    Write-Host $moduleName "module available" -ForegroundColor Cyan
+    Import-Module -Name $moduleName
+    }
+else
+    {
+    Write-Host "Installing" $moduleName "module ..." -ForegroundColor Yellow
+    Install-Module -Name $moduleName -ErrorAction Stop
+    }
+
+$moduleName = "Microsoft.Graph.Identity.DirectoryManagement"
+if (Get-Module -ListAvailable -Name $moduleName){
+    Write-Host $moduleName "module available" -ForegroundColor Cyan
+    Import-Module -Name $moduleName
+    }
+else
+    {
+    Write-Host "Installing" $moduleName "module ..." -ForegroundColor Yellow
+    Install-Module -Name $moduleName -ErrorAction Stop
+    }
+
+$moduleName = "Microsoft.Graph.Identity.SignIns"
+if (Get-Module -ListAvailable -Name $moduleName){
+    Write-Host $moduleName "module available" -ForegroundColor Cyan
+    Import-Module -Name $moduleName
+    }
+else
+    {
+    Write-Host "Installing" $moduleName "module ..." -ForegroundColor Yellow
+    Install-Module -Name $moduleName -ErrorAction Stop
+    }
+
+}
+
+function Uninstall_Script_Libraries{
+# Remove modules from memory
+$ModulesMemory = Get-Module Microsoft.Graph* -ListAvailable | Select-Object Name -Unique
+
+Foreach ($Module in $ModulesMemory){
+  $ModuleName = $Module.Name
+  Write-Host "Remove-Module" $ModuleName -ForegroundColor Yellow
+  Remove-Module -Name $ModuleName
+  }
+
+#Uninstall Microsoft.Graph modules except Microsoft.Graph.Authentication
+$Modules = Get-Module Microsoft.Graph* -ListAvailable | 
+Where-Object {$_.Name -ne "Microsoft.Graph.Authentication"} | Select-Object Name -Unique
+
+Foreach ($Module in $Modules){
+  $ModuleName = $Module.Name
+  $Versions = Get-Module $ModuleName -ListAvailable
+  Foreach ($Version in $Versions){
+    $ModuleVersion = $Version.Version
+    Write-Host "Uninstall-Module $ModuleName $ModuleVersion" -ForegroundColor Yellow
+    Uninstall-Module $ModuleName -RequiredVersion $ModuleVersion -ErrorAction SilentlyContinue
+  }
+}
+
+#Uninstall the modules cannot be removed from first part.
+$InstalledModules = Get-InstalledModule Microsoft.Graph* | 
+Where-Object {$_.Name -ne "Microsoft.Graph.Authentication"} | Select-Object Name -Unique
+
+Foreach ($InstalledModule in $InstalledModules){
+  $InstalledModuleName = $InstalledModule.Name
+  $InstalledVersions = Get-Module $InstalledModuleName -ListAvailable
+  Foreach ($InstalledVersion in $InstalledVersions){
+    $InstalledModuleVersion = $InstalledVersion.Version
+    Write-Host "Uninstall-Module $InstalledModuleName $InstalledModuleVersion" -ForegroundColor Yellow
+    Uninstall-Module $InstalledModuleName -RequiredVersion $InstalledModuleVersion -ErrorAction SilentlyContinue
+  }
+}
+
+#Uninstall Microsoft.Graph.Authentication
+$ModuleName = "Microsoft.Graph.Authentication"
+$Versions = Get-Module $ModuleName -ListAvailable
+
+Foreach ($Version in $Versions){
+  $ModuleVersion = $Version.Version
+  Write-Host "Uninstall-Module $ModuleName $ModuleVersion" -ForegroundColor Yellow
+  Remove-Module -Name $ModuleName -Force
+  Uninstall-Module $ModuleName -RequiredVersion $ModuleVersion
+    }
+}
+
+if ($Choice_Number -eq 'E') { Break }
 if ($Choice_Number -eq '1') { MFAorNPS }
 if ($Choice_Number -eq '2') { Check_Nps_Server_Module }
 if ($Choice_Number -eq '3') { User_Test_Module }
